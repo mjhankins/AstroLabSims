@@ -4,7 +4,7 @@ Free, browser-based astronomy lab activities built around the real workflow of a
 observing run: open the dome, slew to a target, center it on the spectrometer slit,
 integrate until the signal-to-noise is good enough, and reduce your own data.
 
-**Live site:** https://mjhankins44.github.io/AstroLabSims/
+**Live site:** https://mjhankins.github.io/AstroLabSims/
 
 No installation and no accounts required — the activities run in any modern browser,
 online or from a local copy of this repository.
