@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Educational Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0a0d13; --panel:#141a24; --panel-2:#1b2330; --line:#2a3546;
+    --amber:#ffb454; --amber-dim:#8a6430; --cyan:#6fd3e0; --red:#e4573d;
+    --green:#7ee29a; --text:#cdd6e4; --text-dim:#7d8aa0;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --disp:'Rajdhani',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--night);color:var(--text);font-family:var(--sans);font-size:14px}
+  header{display:flex;align-items:baseline;gap:18px;padding:14px 22px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.14em;color:#fff}
+  header h1 span{color:var(--amber)}
+  header .sub{font-size:12px;color:var(--text-dim);letter-spacing:.06em}
+  nav{margin-left:auto;display:flex;gap:6px}
+  nav button,nav a.navlink{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.1em;background:transparent;
+    color:var(--text-dim);border:1px solid var(--line);padding:7px 14px;cursor:pointer;border-radius:3px;
+    text-decoration:none;display:inline-block}
+  nav button.active{color:var(--night);background:var(--amber);border-color:var(--amber)}
+  nav button:focus-visible,nav a.navlink:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .screen{display:none;padding:16px 22px 30px;max-width:1180px;margin:0 auto}
+  .screen.active{display:block}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px}
+  .panel h3{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;color:var(--text-dim);
+    text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+  .readout{font-family:var(--mono);color:var(--amber);background:#0d0a04;border:1px solid #3a2d12;
+    border-radius:3px;padding:3px 8px;letter-spacing:.08em;text-shadow:0 0 6px rgba(255,180,84,.45);
+    font-size:15px;display:inline-block;min-width:110px;text-align:right}
+  .readout.big{font-size:20px;min-width:150px}
+  .readout.green{color:var(--green);border-color:#1e4029;text-shadow:0 0 6px rgba(126,226,154,.4)}
+  .lbl{font-size:11px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:2px}
+  button.ctrl{font-family:var(--disp);font-weight:600;letter-spacing:.08em;background:var(--panel-2);color:var(--text);
+    border:1px solid var(--line);border-radius:3px;padding:6px 12px;cursor:pointer;font-size:13px}
+  button.ctrl:hover{border-color:var(--amber-dim)}
+  button.ctrl:disabled{opacity:.35;cursor:default}
+  button.ctrl.on{background:var(--amber);color:var(--night);border-color:var(--amber)}
+  button.ctrl:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  select,input[type=text]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:3px;
+    padding:5px 8px;font-family:var(--mono);font-size:13px}
+  select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  .obs-grid{display:grid;grid-template-columns:minmax(430px,1fr) 300px;gap:14px;align-items:start;
+    grid-template-areas:"tv dome" "tv side" "spec side"}
+  #obsTv{grid-area:tv}
+  #domePanel{grid-area:dome}
+  #obsSide{grid-area:side}
+  #specPanel{grid-area:spec}
+  .tv-wrap{position:relative}
+  #tvCanvas{background:#000;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
+  .tv-tag{position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    letter-spacing:.1em;pointer-events:none}
+  .tv-tag b{color:var(--amber)}
+  .clock-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .coord-row{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+  .nsew{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,36px);gap:5px;justify-content:center;margin:8px 0}
+  .nsew button{font-family:var(--disp);font-weight:700;font-size:15px}
+  .nsew .blank{visibility:hidden}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spread{justify-content:space-between}
+  /* dome switch */
+  .dome-switch{display:flex;align-items:center;gap:10px}
+  .dome-led{width:10px;height:10px;border-radius:50%;background:#5a1f14;box-shadow:0 0 4px rgba(228,87,61,.6)}
+  .dome-led.open{background:var(--green);box-shadow:0 0 6px rgba(126,226,154,.8)}
+  #specCanvas{background:#04121a;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
+  .spec-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
+  .cls-grid{display:grid;grid-template-columns:minmax(500px,1fr) 260px;gap:14px;align-items:start;
+    grid-template-areas:"main unk" "main side" "cursor side" "analysis side"}
+  #clsMain{grid-area:main}
+  #unknownPanel{grid-area:unk}
+  #cursorRow{grid-area:cursor}
+  #clsSide{grid-area:side}
+  #analysisPanel{grid-area:analysis}
+  #clsCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
+  #atlasList,#lineList{list-style:none;max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;background:var(--panel-2)}
+  #atlasList{max-height:224px}
+  #lineList{max-height:170px}
+  #atlasList li,#lineList li{font-family:var(--mono);font-size:13px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #10151f;color:var(--text)}
+  #atlasList li:hover,#lineList li:hover{background:#232d3e}
+  #atlasList li.sel,#lineList li.sel{background:var(--amber);color:var(--night);font-weight:600}
+  #lineList li span{color:var(--text-dim);float:right}
+  #zoomCanvas{background:#04121a;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
+  .atlas-badge{font-family:var(--mono);font-size:11px;padding:3px 7px;border-radius:3px;display:inline-block;margin-top:8px;line-height:1.4}
+  .atlas-badge.synth{background:#3a2d12;color:var(--amber)}
+  .atlas-badge.real{background:#153826;color:var(--green)}
+  #resultsWrap{max-height:248px;overflow-y:auto;margin-top:6px}
+  #resultsTable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  #resultsTable th,#resultsTable td{border:1px solid var(--line);padding:4px 6px;text-align:left}
+  #resultsTable th{color:var(--text-dim);font-weight:500;letter-spacing:.05em;position:sticky;top:0;background:var(--panel-2)}
+    padding:10px 14px;margin:10px 0;border-radius:0 3px 3px 0}
+  footer{padding:18px 22px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--line);max-width:1180px;margin:0 auto;line-height:1.6}
+  .hint{color:var(--text-dim);font-size:12px;line-height:1.55;margin-top:6px}
+  .statusline{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:8px;min-height:16px}
+  @media (max-width:920px){
+    /* single-column: explicit, sensible stacking order on each page */
+    .obs-grid{grid-template-columns:1fr;grid-template-areas:"dome" "tv" "side" "spec"}
+    .cls-grid{grid-template-columns:1fr;grid-template-areas:"unk" "main" "side" "analysis" "cursor"}
+  }
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OPEN EDUCATIONAL <span>OBSERVATORY</span></h1>
+  <div class="sub">A virtual observatory for teaching astronomical spectroscopy</div>
+  <nav>
+    <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
+    <button id="tabCls" onclick="showScreen('cls')">Classify Spectra</button>
+    <a class="navlink" href="../">Homepage</a>
+  </nav>
+</header>
+
+<!-- ============ OBSERVATORY ============ -->
+<section id="scr-obs" class="screen active">
+  <div class="clock-row">
+    <div><span class="lbl">Universal Time</span><span class="readout big" id="utClock">--:--:--</span></div>
+    <div><span class="lbl">Local Sidereal Time</span><span class="readout big" id="lstClock">--:--:--</span></div>
+    <div><span class="lbl">Julian Date</span><span class="readout" id="jdClock" style="min-width:160px">-------.------</span></div>
+    <div style="margin-left:auto"><span class="lbl">Site · 0.9 m Telescope</span><span class="readout green" style="min-width:200px">KPNO-like · 31°57′N 111°36′W</span></div>
+  </div>
+
+  <div class="obs-grid">
+    <div id="obsTv">
+      <div class="tv-wrap">
+        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b id="fovTag">FINDER 2.5°</b></div>
+      </div>
+      <div class="coord-row">
+        <div><span class="lbl">Right Ascension</span><span class="readout big" id="raOut">--:--:--.-</span></div>
+        <div><span class="lbl">Declination</span><span class="readout big" id="decOut">±--°--′--″</span></div>
+        <div style="margin-left:auto"><span class="lbl">Nearest object</span><span class="readout" id="targOut" style="min-width:170px">—</span></div>
+      </div>
+    </div>
+
+      <div id="specPanel" class="panel">
+        <h3>Photon-Counting Spectrometer · 3700–4700 Å</h3>
+        <canvas id="specCanvas" width="720" height="240"></canvas>
+        <div class="spec-stats">
+          <div><span class="lbl">Photon count</span><span class="readout" id="phCount">0</span></div>
+          <div><span class="lbl">Photons / channel</span><span class="readout" id="phChan">0.0</span></div>
+          <div><span class="lbl">Integration (s)</span><span class="readout" id="intSec">0.0</span></div>
+          <div><span class="lbl">Signal / noise</span><span class="readout green" id="snrOut">0.0</span></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+            <button class="ctrl" id="goBtn" onclick="specGo()">▸ Go</button>
+            <button class="ctrl" id="stopBtn" onclick="specStop()" disabled>■ Stop</button>
+            <button class="ctrl" id="saveBtn" onclick="saveSpectrum()" disabled>Save spectrum</button>
+          </div>
+        </div>
+        <div class="statusline" id="specStatus">Open the dome, turn on tracking, and center a star between the slit jaws.</div>
+      </div>
+
+      <div class="panel" id="domePanel">
+        <h3>Dome &amp; Telescope</h3>
+        <div class="row spread">
+          <div class="dome-switch">
+            <div class="dome-led" id="domeLed"></div>
+            <span class="lbl" style="margin:0">Dome</span>
+          </div>
+          <button class="ctrl" id="domeBtn" onclick="toggleDome()">OPEN DOME</button>
+        </div>
+        <div class="row spread" style="margin-top:10px">
+          <span class="lbl" style="margin:0">Tracking</span>
+          <button class="ctrl" id="trackBtn" onclick="toggleTracking()">OFF</button>
+        </div>
+        <div class="row spread" style="margin-top:6px">
+          <span class="lbl" style="margin:0">View</span>
+          <button class="ctrl" id="viewBtn" onclick="toggleView()">FINDER</button>
+        </div>
+        <p class="hint" id="trackHint">With tracking off, the sky drifts west at the sidereal rate — watch the monitor.</p>
+      </div>
+
+    <div class="stack" id="obsSide">
+
+      <div class="panel">
+        <h3>Telescope Motion</h3>
+        <div class="nsew">
+          <button class="blank"></button><button class="ctrl" data-dir="N">N</button><button class="blank"></button>
+          <button class="ctrl" data-dir="E">E</button><button class="blank"></button><button class="ctrl" data-dir="W">W</button>
+          <button class="blank"></button><button class="ctrl" data-dir="S">S</button><button class="blank"></button>
+        </div>
+        <div class="row spread">
+          <span class="lbl" style="margin:0">Slew rate</span>
+          <select id="rateSel" aria-label="Slew rate">
+            <option value="1">1×</option><option value="2">2×</option><option value="4">4×</option>
+            <option value="8" selected>8×</option><option value="16">16×</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Hot List · Program Stars</h3>
+        <select id="hotSel" style="width:100%" aria-label="Hot list"></select>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to object</button>
+        </div>
+        <p class="hint">Unknown-type stars for the classification exercise. Spectral types are withheld until you classify them yourself.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Spectra</h3>
+        <div id="savedList" class="hint" style="font-family:var(--mono)">None yet.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CLASSIFICATION ============ -->
+<section id="scr-cls" class="screen">
+  <div class="cls-grid">
+    <div class="panel" id="unknownPanel">
+      <h3>Unknown Spectrum</h3>
+      <select id="unkSel" style="width:100%" onchange="loadUnknown()" aria-label="Unknown spectrum"></select>
+      <p class="hint">Spectra you save at the telescope appear here, alongside a short pre-observed program list.</p>
+    </div>
+
+    <div id="clsMain">
+      <canvas id="clsCanvas" width="760" height="560"></canvas>
+      <p class="hint">Top: the selected atlas standard. Middle: your unknown. Bottom: the difference (standard − unknown).
+        Step through the atlas until the difference trace flattens — that bracket is your classification.
+        Click any trace to read λ and intensity.</p>
+    </div>
+
+    <div class="row" id="cursorRow">
+      <div><span class="lbl">Cursor λ (Å)</span><span class="readout" id="curWl">----.-</span></div>
+      <div><span class="lbl">Intensity</span><span class="readout" id="curInt">-.---</span></div>
+    </div>
+
+      <div class="panel" id="analysisPanel">
+        <h3>Analysis · Zoom &amp; Equivalent Width</h3>
+        <canvas id="zoomCanvas" width="760" height="340"></canvas>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" onclick="azZoom(0.6)">Zoom in</button>
+          <button class="ctrl" onclick="azZoom(1/0.6)">Zoom out</button>
+          <button class="ctrl" onclick="azPan(-1)">◀ Pan</button>
+          <button class="ctrl" onclick="azPan(1)">Pan ▶</button>
+          <button class="ctrl" onclick="azReset()">Reset</button>
+          <label class="hint" style="margin:0;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="lineChk" onchange="drawZoom()"> all line IDs</label>
+          <button class="ctrl" id="ewBtn" onclick="toggleEW()" style="margin-left:auto">Measure EW</button>
+          <button class="ctrl" onclick="clearEW()">Clear</button>
+        </div>
+        <div class="statusline" id="ewOut">Zoom into a line, press “Measure EW”, then click the continuum on the left and right shoulders of the line.</div>
+      </div>
+
+    <div class="stack" id="clsSide">
+      <div class="panel">
+        <h3>Atlas · Main Sequence</h3>
+        <ul id="atlasList"></ul>
+        <div class="atlas-badge synth" id="atlasBadge">Standards: synthetic models</div>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" id="atlasToggleBtn" style="flex:1" onclick="toggleAtlasSource()" disabled>Use full set</button>
+        </div>
+        <p class="hint" id="atlasHint">13 synthetic standards are used when no atlas file is present.</p>
+      </div>
+      <div class="panel">
+        <h3>Record Classification</h3>
+        <div class="row">
+          <select id="clsTypeSel" aria-label="Classification"></select>
+          <button class="ctrl" onclick="recordClassification()">Record</button>
+        </div>
+        <div id="resultsWrap"><table id="resultsTable"><thead><tr><th>Object</th><th>Your class</th><th>S/N</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h3>Spectral Lines</h3>
+        <ul id="lineList"></ul>
+        <div class="hint" id="lineHelp" style="min-height:34px">Wavelengths are in Ångstroms (Å). Click a line to center the analysis window on it and read its description.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<footer>
+  Spectral standards: Jacoby, G. H., Hunter, D. A., &amp; Christian, C. A. 1984, "A Library of Stellar Spectra",
+  ApJS, 56, 257 — data distributed by STScI. Retain this citation in derivative works.
+  Part of the <a href="../" style="color:var(--cyan)">Open Educational Observatory</a>;
+  see the homepage for project credits and license.
+</footer>
+
+<!-- Real Jacoby atlas auto-loads if the companion script has been run -->
+<script src="jacoby_atlas.js" onerror="void 0"></script>
+
+<script>
+"use strict";
+/* =====================================================================
+   OPEN EDUCATIONAL OBSERVATORY — v0.2
+   time · sky/starfield · dome · telescope (with animated slews)
+   photon-counting spectrometer · spectral synthesis + Jacoby atlas
+   classification tool · credits
+   ===================================================================== */
+
+/* ---------------- time & site ---------------- */
+const SITE={lonDeg:-111.6,latDeg:31.96};
+function julianDate(d){return d.getTime()/86400000+2440587.5;}
+function lstHours(d){
+  const jd=julianDate(d),T=(jd-2451545.0)/36525.0;
+  let g=280.46061837+360.98564736629*(jd-2451545.0)+0.000387933*T*T;
+  g=((g%360)+360)%360; let l=g+SITE.lonDeg; l=((l%360)+360)%360; return l/15;
+}
+function fmtHMS(h,prec=1){
+  h=((h%24)+24)%24;
+  const H=Math.floor(h),m=(h-H)*60,M=Math.floor(m),s=(m-M)*60;
+  return String(H).padStart(2,"0")+":"+String(M).padStart(2,"0")+":"+s.toFixed(prec).padStart(prec?5:2,"0");
+}
+function fmtDMS(deg){
+  const sign=deg<0?"−":"+";deg=Math.abs(deg);
+  const D=Math.floor(deg),m=(deg-D)*60,M=Math.floor(m),S=Math.round((m-M)*60);
+  return sign+String(D).padStart(2,"0")+"°"+String(M).padStart(2,"0")+"′"+String(S).padStart(2,"0")+"″";
+}
+
+/* ---------------- spectral scale & synthesis ---------------- */
+const TYPE_LETTERS=["O","B","A","F","G","K","M"];
+function typeToT(s){const i=TYPE_LETTERS.indexOf(s[0]);const sub=parseFloat(s.slice(1))||0;return i*10+sub;}
+function tToType(t){t=Math.max(2,Math.min(69,t));const i=Math.floor(t/10),sub=Math.round(t-10*i);
+  return TYPE_LETTERS[i]+(sub===10?"0":sub)+"V";}
+const TEFF_TABLE=[[2,44000],[5,42000],[10,30000],[13,19000],[15,15400],[18,11400],[20,9800],[25,8200],
+  [30,7300],[35,6650],[40,5940],[45,5560],[50,5150],[55,4400],[60,3850],[65,3200],[69,2900]];
+function teffOf(t){for(let i=0;i<TEFF_TABLE.length-1;i++){const[a,A]=TEFF_TABLE[i],[b,B]=TEFF_TABLE[i+1];
+  if(t>=a&&t<=b)return A+(B-A)*(t-a)/(b-a);}return t<2?45000:2900;}
+function tri(t,a,b,c){if(t<=a||t>=c)return 0;return t<b?(t-a)/(b-a):(c-t)/(c-b);}
+function planck(T,wl){const l=wl*1e-10,h=6.626e-34,c=3e8,k=1.381e-23;
+  return 1/(Math.pow(l,5)*(Math.exp(h*c/(l*k*T))-1));}
+/* --- Empirical blue-line calibration -------------------------------------
+   Depths of the Balmer series (and blends that dominate the same wavelengths
+   in cool stars: Ca II H, Fe I, Mg I, He I 3819) measured directly from the
+   Jacoby, Hunter & Christian (1984) class-V spectra at 14 anchor types,
+   O5V..M5V, then linearly interpolated in the numeric type scale t.
+   This keeps the synthetic standards consistent with the real atlas across
+   the 3700-3900 A confluence region. */
+const T_ANCH=[5,10,13,16,21,25,30,35,40,46,50,55,60,65];
+const EMP_LINES=[
+  {wl:4340.5,sh:8,sc:3.5,d:[0.23,0.31,0.38,0.54,0.63,0.59,0.53,0.43,0.39,0.36,0.25,0.25,0.26,0.11]},
+  {wl:4101.7,sh:8,sc:3.5,d:[0.23,0.31,0.42,0.56,0.65,0.60,0.50,0.41,0.38,0.25,0.17,0.20,0.24,0.15]},
+  {wl:3969.0,sh:6,sc:3.5,d:[0.25,0.32,0.44,0.59,0.67,0.65,0.65,0.65,0.71,0.71,0.55,0.81,0.55,0.52]},
+  {wl:3889.1,sh:6,sc:3.0,d:[0.18,0.32,0.42,0.58,0.62,0.58,0.49,0.45,0.54,0.44,0.39,0.62,0.47,0.54]},
+  {wl:3835.4,sh:6,sc:3.0,d:[0.19,0.33,0.40,0.54,0.60,0.57,0.49,0.45,0.62,0.58,0.54,0.85,0.46,0.51]},
+  {wl:3819.6,sh:4,sc:2.5,d:[0.03,0.16,0.15,0.11,0.15,0.15,0.13,0.18,0.44,0.47,0.48,0.78,0.41,0.63]},
+  {wl:3797.9,sh:4,sc:2.5,d:[0.17,0.21,0.39,0.55,0.52,0.50,0.42,0.33,0.45,0.30,0.31,0.60,0.32,0.41]},
+  {wl:3770.6,sh:4,sc:2.5,d:[0.21,0.24,0.42,0.55,0.46,0.43,0.36,0.34,0.33,0.28,0.29,0.56,0.24,0.41]},
+  {wl:3750.2,sh:4,sc:2.5,d:[0.21,0.16,0.39,0.54,0.42,0.40,0.39,0.38,0.48,0.51,0.51,0.76,0.57,0.68]},
+  {wl:3734.4,sh:4,sc:2.5,d:[0.15,0.12,0.36,0.52,0.34,0.37,0.39,0.35,0.48,0.53,0.54,0.74,0.56,0.73]},
+  {wl:3721.9,sh:4,sc:2.5,d:[0.16,0.11,0.31,0.50,0.23,0.24,0.26,0.30,0.34,0.37,0.41,0.63,0.51,0.53]},
+  {wl:3712.0,sh:4,sc:2.5,d:[0.15,0.10,0.33,0.49,0.14,0.15,0.23,0.23,0.27,0.29,0.28,0.43,0.27,0.25]},
+  {wl:3703.9,sh:4,sc:2.5,d:[0.17,0.15,0.33,0.49,0.09,0.10,0.22,0.25,0.27,0.31,0.34,0.43,0.39,0.27]},
+];
+function empDepth(d){
+  return t=>{
+    if(t<=T_ANCH[0])return d[0];
+    if(t>=T_ANCH[T_ANCH.length-1])return d[d.length-1];
+    let k=0;while(k<T_ANCH.length-2&&T_ANCH[k+1]<t)k++;
+    const f=(t-T_ANCH[k])/(T_ANCH[k+1]-T_ANCH[k]);
+    return d[k]*(1-f)+d[k+1]*f;
+  };
+}
+const LINES=[
+  // Halpha & Hbeta lie outside the 3700-4700 A window; kept for completeness
+  ...[6563,4861].map((wl,i)=>[wl,(t)=>(t<25?9-i*0.5:5-i*0.3),
+      (t)=>(0.80-0.06*i)*tri(t,4,21,52)]),
+  // empirically calibrated blue features (see table above)
+  ...EMP_LINES.map(L=>[L.wl,(t)=>(t<22?L.sh:L.sc),empDepth(L.d)]),
+  [3933,()=>3.5,(t)=>0.85*tri(t,16,46,69)],
+  [4686,()=>2.5,(t)=>0.30*tri(t,-6,3,10)],[4541,()=>2.5,(t)=>0.18*tri(t,-6,3,10)],
+  [4471,()=>2.5,(t)=>0.38*tri(t,-2,8,19)],[4026,()=>2.5,(t)=>0.30*tri(t,-2,8,19)],
+  [4387,()=>2.5,(t)=>0.20*tri(t,-2,8,19)],
+  [4305,()=>9,(t)=>0.50*tri(t,30,49,64)],
+  [4226,()=>3,(t)=>0.55*tri(t,38,58,70)],
+  [4045,()=>2.5,(t)=>0.38*tri(t,24,50,70)],[4271,()=>2.5,(t)=>0.30*tri(t,24,50,70)],
+  [4325,()=>2.5,(t)=>0.28*tri(t,24,50,70)],[4383,()=>2.5,(t)=>0.26*tri(t,24,50,70)],
+  [4144,()=>2.5,(t)=>0.20*tri(t,24,50,70)],
+  [5172,()=>4,(t)=>0.45*tri(t,28,50,70)],[5890,()=>3,(t)=>0.50*tri(t,34,56,70)],
+];
+const TIO_HEADS=[4584,4761,4954,5167,5448,5847,6159];
+const WL0=3700,WL1=4700,DWL=2,NCH=Math.round((WL1-WL0)/DWL)+1;
+function synthSpectrum(t){
+  const T=teffOf(t),out=new Float64Array(NCH),tio=Math.max(0,(t-52)/13);
+  for(let i=0;i<NCH;i++){
+    const wl=WL0+i*DWL;let I=planck(T,wl),ab=0;
+    for(const[lc,sig,dep]of LINES){const d=dep(t);if(d<=0.004)continue;
+      const s=sig(t),dx=(wl-lc)/s;if(Math.abs(dx)<5)ab+=d*Math.exp(-0.5*dx*dx);}
+    if(tio>0)for(const h of TIO_HEADS)if(wl>=h&&wl<h+120)ab+=0.55*tio*Math.exp(-(wl-h)/70);
+    if(wl<3800&&t>12&&t<40)I*=(0.75+0.25*(wl-3646)/154);
+    out[i]=Math.max(0.015,I*(1-Math.min(0.93,ab)));
+  }
+  let mx=0;for(const v of out)mx=Math.max(mx,v);
+  for(let i=0;i<NCH;i++)out[i]/=mx;
+  return out;
+}
+
+/* ---------------- atlas: synthetic default, Jacoby toggle if available ----- */
+const ATLAS_TYPES=["O5V","B0V","B6V","A1V","A5V","F0V","F5V","G0V","G6V","K0V","K5V","M0V","M5V"];
+let ATLAS_SOURCE="synthetic";
+const syntheticAtlas=ATLAS_TYPES.map(s=>({label:s,t:typeToT(s),star:null,data:synthSpectrum(typeToT(s))}));
+let jacobyAtlas=null;            // full real atlas, from jacoby_atlas.js if present
+let teachingAtlas=null;          // 13-rung subset of the real atlas
+let atlas=syntheticAtlas;        // whichever ladder is currently displayed
+
+/* template for any type t — always interpolates within the highest-fidelity
+   family available (the full real atlas if loaded, else the synthetic set),
+   so simulated spectra are consistent with BOTH displayed ladders */
+function templateForT(t){
+  const base=jacobyAtlas||syntheticAtlas;
+  if(t<=base[0].t)return base[0].data;
+  if(t>=base[base.length-1].t)return base[base.length-1].data;
+  let k=0;while(k<base.length-2&&base[k+1].t<t)k++;
+  const a=base[k],b=base[k+1],f=(t-a.t)/(b.t-a.t);
+  const out=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++)out[i]=a.data[i]*(1-f)+b.data[i]*f;
+  return out;
+}
+
+function resampleToGrid(wl0,dwl,flux){
+  const out=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++){
+    const wl=WL0+i*DWL,x=(wl-wl0)/dwl;
+    const j=Math.floor(x),f=x-j;
+    if(j<0)out[i]=flux[0];
+    else if(j>=flux.length-1)out[i]=flux[flux.length-1];
+    else out[i]=flux[j]*(1-f)+flux[j+1]*f;
+  }
+  let mx=0;for(const v of out)mx=Math.max(mx,v);
+  if(mx>0)for(let i=0;i<NCH;i++)out[i]/=mx;
+  return out;
+}
+/* ---- continuum matching -------------------------------------------------
+   The JHC spectra are real flux-calibrated (and de-reddened) spectrophotometry;
+   the app's synthetic spectra ride on an idealized Planck continuum. To keep
+   both standard sets on ONE continuum system — so a spectrum "observed" under
+   either atlas fits both — each Jacoby spectrum is rectified by its own
+   smooth continuum and re-colored onto the model continuum for its type.
+   Line profiles are preserved exactly; only the broadband shape changes.   */
+/* Continuum estimator: iterative, asymmetrically sigma-clipped quartic fit.
+   Points sitting in absorption fall below the fit and are rejected on each
+   iteration, so the polynomial converges onto the upper envelope — including
+   at the spectrum edges, where windowed filters go astray. */
+function estimateContinuum(f,deg=4){
+  const n=f.length,x=new Float64Array(n);
+  for(let i=0;i<n;i++)x[i]=2*i/(n-1)-1;
+  const m=deg+1;
+  let use=new Uint8Array(n).fill(1);
+  const c=new Float64Array(n);
+  for(let it=0;it<10;it++){
+    const A=Array.from({length:m},()=>new Float64Array(m)),b=new Float64Array(m);
+    for(let i=0;i<n;i++){
+      if(!use[i])continue;
+      const p=new Float64Array(m);p[0]=1;
+      for(let k=1;k<m;k++)p[k]=p[k-1]*x[i];
+      for(let r=0;r<m;r++){b[r]+=p[r]*f[i];for(let q=0;q<m;q++)A[r][q]+=p[r]*p[q];}
+    }
+    const M=A.map((row,r)=>[...row,b[r]]);
+    for(let col=0;col<m;col++){
+      let piv=col;
+      for(let r=col+1;r<m;r++)if(Math.abs(M[r][col])>Math.abs(M[piv][col]))piv=r;
+      [M[col],M[piv]]=[M[piv],M[col]];
+      for(let r=0;r<m;r++){
+        if(r===col)continue;
+        const fac=M[r][col]/M[col][col];
+        for(let q=col;q<=m;q++)M[r][q]-=fac*M[col][q];
+      }
+    }
+    const coef=M.map((row,r)=>row[m]/row[r]);
+    for(let i=0;i<n;i++){let v=0,p=1;for(let k=0;k<m;k++){v+=coef[k]*p;p*=x[i];}c[i]=v;}
+    let s=0,cnt=0;
+    for(let i=0;i<n;i++)if(use[i]){const d=f[i]-c[i];s+=d*d;cnt++;}
+    const sig=Math.sqrt(s/Math.max(1,cnt));
+    let changed=0;
+    for(let i=0;i<n;i++){
+      const keep=f[i]>=c[i]-0.5*sig?1:0;
+      if(keep!==use[i])changed++;
+      use[i]=keep;
+    }
+    if(!changed&&it>2)break;
+  }
+  for(let i=0;i<n;i++)c[i]=Math.max(c[i],1e-6);
+  return c;
+}
+function synthContinuum(t){
+  const T=teffOf(t),out=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++){
+    const wl=WL0+i*DWL;let I=planck(T,wl);
+    if(wl<3800&&t>12&&t<40)I*=(0.75+0.25*(wl-3646)/154);  // identical ramp to synthSpectrum
+    out[i]=I;
+  }
+  return out;
+}
+function recolorToModelContinuum(data,t){
+  const cont=estimateContinuum(data),mc=synthContinuum(t);
+  const out=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++)out[i]=cont[i]>1e-9?data[i]/cont[i]*mc[i]:0;
+  let mx=0;for(const v of out)mx=Math.max(mx,v);
+  if(mx>0)for(let i=0;i<NCH;i++)out[i]/=mx;
+  return out;
+}
+function registerJacobyAtlas(J){
+  try{
+    if(!J||!J.entries||!J.entries.length)throw new Error("empty atlas");
+    const entries=J.entries.slice().sort((a,b)=>typeToT(a.label)-typeToT(b.label));
+    jacobyAtlas=entries.map(e=>{
+      const t=typeToT(e.label);
+      return{label:e.label,t,star:e.star||null,
+        data:recolorToModelContinuum(resampleToGrid(e.wl0,e.dwl,e.flux),t)};
+    });
+    // teaching subset: the 13 classic rungs, drawn from the real atlas
+    // (exact label match preferred, nearest type as fallback)
+    teachingAtlas=ATLAS_TYPES.map(lab=>{
+      const exact=jacobyAtlas.find(a=>a.label===lab);
+      if(exact)return exact;
+      const tw=typeToT(lab);
+      let best=jacobyAtlas[0];
+      for(const a of jacobyAtlas)if(Math.abs(a.t-tw)<Math.abs(best.t-tw))best=a;
+      return best;
+    });
+    // with real data available, both modes use it; start on the simple set
+    atlas=teachingAtlas;ATLAS_SOURCE="teaching";
+    const b=document.getElementById("atlasToggleBtn");
+    b.disabled=false;b.textContent="Use full set ("+jacobyAtlas.length+" standards)";
+    const badge=document.getElementById("atlasBadge");
+    badge.className="atlas-badge synth";
+    badge.textContent="Standards: simple set of "+teachingAtlas.length;
+    document.getElementById("atlasHint").textContent=
+      "Simple set: "+teachingAtlas.length+" well-spaced rungs. Full set: all "+
+      jacobyAtlas.length+" class-V subtypes.";
+    regenProgramSpectra();          // unknowns now come from the real atlas too
+    buildAtlasUI();refreshUnknownSel();
+  }catch(e){
+    console.warn("jacoby_atlas.js present but unreadable:",e.message);
+    document.getElementById("atlasHint").textContent=
+      "The Jacoby atlas file could not be read — synthetic standards remain in use.";
+  }
+}
+function toggleAtlasSource(){
+  if(!jacobyAtlas)return;
+  const tPrev=atlas[cls.stdIdx]?atlas[cls.stdIdx].t:40;
+  if(ATLAS_SOURCE==="teaching"){atlas=jacobyAtlas;ATLAS_SOURCE="full";}
+  else{atlas=teachingAtlas;ATLAS_SOURCE="teaching";}
+  // keep the selected standard as close as possible across the switch
+  let best=0,bd=1e9;
+  atlas.forEach((a,i)=>{const d=Math.abs(a.t-tPrev);if(d<bd){bd=d;best=i;}});
+  cls.stdIdx=best;
+  const badge=document.getElementById("atlasBadge"),btn=document.getElementById("atlasToggleBtn");
+  if(ATLAS_SOURCE==="full"){
+    badge.className="atlas-badge real";        // green: full set active
+    badge.textContent="Standards: full set of "+jacobyAtlas.length;
+    btn.textContent="Use simple set ("+teachingAtlas.length+" standards)";
+  }else{
+    badge.className="atlas-badge synth";       // yellow: simple set active
+    badge.textContent="Standards: simple set of "+teachingAtlas.length;
+    btn.textContent="Use full set ("+jacobyAtlas.length+" standards)";
+  }
+  // note: the underlying data family does not change, so unknowns and saved
+  // spectra remain valid against both ladders — no regeneration needed
+  buildAtlasUI();refreshUnknownSel();drawCls();drawZoom();
+}
+/* ---------------- program stars ---------------- */
+const HOTLIST=[
+  {name:"HD 23630-X1",ra:3.79, dec:24.11,V:7.2, type:"B7V"},
+  {name:"HD 31964-X2",ra:5.03, dec:43.82,V:8.1, type:"A3V"},
+  {name:"HD 40183-X3",ra:5.99, dec:44.95,V:7.8, type:"F2V"},
+  {name:"HD 52973-X4",ra:7.07, dec:20.57,V:8.6, type:"F8V"},
+  {name:"HD 62509-X5",ra:7.76, dec:28.03,V:7.5, type:"G4V"},
+  {name:"HD 75732-X6",ra:8.88, dec:28.33,V:9.0, type:"G9V"},
+  {name:"HD 82885-X7",ra:9.60, dec:35.81,V:8.9, type:"K2V"},
+  {name:"HD 95735-X8",ra:11.06,dec:35.97,V:9.4, type:"K6V"},
+  {name:"HD 79210-X9",ra:9.24, dec:52.69,V:9.9, type:"M1V"},
+  {name:"BD+43 1953-X10",ra:10.4,dec:43.5,V:10.6,type:"M4V"},
+];
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function noisify(clean,snr){
+  const out=new Float64Array(clean.length);
+  for(let i=0;i<clean.length;i++)
+    out[i]=Math.max(0,clean[i]+(randn()*Math.sqrt(Math.max(clean[i],0.02))/snr));
+  let mx=0;for(const v of out)mx=Math.max(mx,v);
+  for(let i=0;i<out.length;i++)out[i]/=mx;
+  return out;
+}
+const PROGRAM_DEFS=[
+  {name:"Program #1 (HZ 948)",  type:"B3V",snr:22},
+  {name:"Program #2 (Feige 40)",type:"F6V",snr:18},
+  {name:"Program #3 (Ross 512)",type:"G8V",snr:20},
+  {name:"Program #4 (Gmb 1830)",type:"K4V",snr:16},
+];
+let programSpectra=[];
+function regenProgramSpectra(){
+  programSpectra=PROGRAM_DEFS.map(p=>({name:p.name,hiddenType:p.type,snr:p.snr,
+    data:noisify(templateForT(typeToT(p.type)),p.snr)}));
+}
+
+/* ---------------- telescope & dome state ---------------- */
+const APERTURE=0.9;
+const st={
+  ra:HOTLIST[0].ra, dec:HOTLIST[0].dec,
+  tracking:false, view:"finder",
+  dome:"closed", domeAnim:0,     // 0 = fully closed, 1 = fully open
+  slew:null,                     // slew state machine (see below)
+  lastFrame:performance.now(),
+};
+
+/* ---------------- procedural star field ---------------- */
+function hash3(a,b,c){let h=(a*374761393+b*668265263+c*2246822519)|0;
+  h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296;}
+const CELL=0.25;
+function starsInCell(cx,cy){
+  const n=3+Math.floor(hash3(cx,cy,1)*7),arr=[];
+  for(let k=0;k<n;k++){
+    const u1=hash3(cx,cy,10+k*3),u2=hash3(cx,cy,11+k*3),u3=hash3(cx,cy,12+k*3),u4=hash3(cx,cy,13+k*3);
+    const mag=6.5+7.5*Math.pow(u3,0.45);
+    let t;const r=u4;
+    if(r<0.01)t=5;else if(r<0.05)t=12+8*hash3(cx,cy,20+k);else if(r<0.15)t=20+10*hash3(cx,cy,21+k);
+    else if(r<0.30)t=30+10*hash3(cx,cy,22+k);else if(r<0.60)t=40+10*hash3(cx,cy,23+k);
+    else if(r<0.90)t=50+10*hash3(cx,cy,24+k);else t=60+8*hash3(cx,cy,25+k);
+    arr.push({raDeg:cx*CELL+u1*CELL,decDeg:cy*CELL+u2*CELL,mag,t,name:null});
+  }
+  return arr;
+}
+function visibleStars(fovDeg){
+  const ra0=st.ra*15,dec0=st.dec;
+  const half=fovDeg/2/Math.cos(dec0*Math.PI/180),halfD=fovDeg/2,out=[];
+  const cx0=Math.floor((ra0-half)/CELL),cx1=Math.floor((ra0+half)/CELL);
+  const cy0=Math.floor((dec0-halfD)/CELL),cy1=Math.floor((dec0+halfD)/CELL);
+  for(let cx=cx0;cx<=cx1;cx++)for(let cy=cy0;cy<=cy1;cy++)
+    for(const s of starsInCell(cx,cy))out.push(s);
+  for(const h of HOTLIST)out.push({raDeg:h.ra*15,decDeg:h.dec,mag:h.V,t:typeToT(h.type),name:h.name});
+  return out;
+}
+function starColor(t){
+  if(t<12)return"#aebfff";if(t<20)return"#cfd8ff";if(t<30)return"#ffffff";
+  if(t<40)return"#fff3d6";if(t<50)return"#ffe0a8";if(t<60)return"#ffc27d";return"#ff9d6b";
+}
+
+/* ---------------- TV rendering ---------------- */
+const tv=document.getElementById("tvCanvas"),tvx=tv.getContext("2d");
+function fovNow(){return st.view==="finder"?2.5:0.25;}
+function magLimit(){return st.view==="finder"?11.5:14;}
+function drawTV(){
+  const W=tv.width,H=tv.height;
+  tvx.fillStyle="#000";tvx.fillRect(0,0,W,H);
+  const domeOpen=st.domeAnim;
+  const transit=st.slew&&st.slew.phase==="transit";
+
+  if(domeOpen>0.02&&!transit){
+    const fov=fovNow(),scale=H/fov,ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180),lim=magLimit();
+    for(const s of visibleStars(fov*1.2)){
+      if(s.mag>lim)continue;
+      const x=W/2-((s.raDeg-ra0)*cosd)*scale, y=H/2-((s.decDeg-dec0))*scale;
+      if(x<-8||x>W+8||y<-8||y>H+8)continue;
+      const r=Math.max(0.7,(lim-s.mag)*(st.view==="finder"?0.55:1.5));
+      const g=tvx.createRadialGradient(x,y,0,x,y,r*2.4);
+      g.addColorStop(0,starColor(s.t));g.addColorStop(0.4,starColor(s.t));g.addColorStop(1,"transparent");
+      tvx.fillStyle=g;tvx.beginPath();tvx.arc(x,y,r*2.4,0,7);tvx.fill();
+    }
+    if(st.view==="finder"){
+      const box=(0.25/fov)*H;
+      tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1;
+      tvx.strokeRect(W/2-box/2,H/2-box/2,box,box);
+    }else{
+      tvx.strokeStyle="rgba(228,87,61,.95)";tvx.lineWidth=2;tvx.beginPath();
+      tvx.moveTo(W/2-7,H/2-26);tvx.lineTo(W/2-7,H/2+26);
+      tvx.moveTo(W/2+7,H/2-26);tvx.lineTo(W/2+7,H/2+26);tvx.stroke();
+    }
+  }
+
+  if(transit){
+    tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
+    tvx.strokeStyle="rgba(111,211,224,.08)";
+    for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
+    tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
+    tvx.textAlign="left";
+  }
+
+  /* dome shutters slide apart from the center */
+  if(domeOpen<0.995){
+    const gap=(W/2)*domeOpen;
+    tvx.fillStyle="#11151d";
+    tvx.fillRect(0,0,W/2-gap,H); tvx.fillRect(W/2+gap,0,W/2-gap,H);
+    tvx.strokeStyle="#232d3e";tvx.lineWidth=2;
+    tvx.beginPath();tvx.moveTo(W/2-gap,0);tvx.lineTo(W/2-gap,H);
+    tvx.moveTo(W/2+gap,0);tvx.lineTo(W/2+gap,H);tvx.stroke();
+    // rivet texture
+    tvx.fillStyle="#1b2330";
+    for(let y=20;y<H;y+=48){
+      if(W/2-gap>24)tvx.fillRect(18,y,4,4);
+      if(W/2-gap>24)tvx.fillRect(W/2-gap-24,y,4,4);
+      if(W/2+gap<W-24)tvx.fillRect(W/2+gap+20,y,4,4);
+      tvx.fillRect(W-24,y,4,4);
+    }
+    if(domeOpen<0.03){
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.fillText("DOME CLOSED",W/2,H/2);
+      tvx.font="12px 'IBM Plex Mono'";
+      tvx.fillText("open the dome to see the sky",W/2,H/2+22);
+      tvx.textAlign="left";
+    }
+  }
+
+  const vg=tvx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.75);
+  vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,0.5)");
+  tvx.fillStyle=vg;tvx.fillRect(0,0,W,H);
+}
+
+function objectInSlit(){
+  if(st.domeAnim<0.9||st.slew)return null;
+  const tol=st.view==="finder"?0.05:0.004;
+  const ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180);
+  let best=null,bd=1e9;
+  for(const s of visibleStars(0.3)){
+    const d=Math.hypot((s.raDeg-ra0)*cosd,(s.decDeg-dec0));
+    if(d<bd){bd=d;best=s;}
+  }
+  return(best&&bd<tol)?best:null;
+}
+
+/* ---------------- dome / tracking / view controls ---------------- */
+function toggleDome(){
+  st.dome=st.dome==="open"?"closed":"open";
+  document.getElementById("domeBtn").textContent=st.dome==="open"?"CLOSE DOME":"OPEN DOME";
+}
+function toggleTracking(){
+  st.tracking=!st.tracking;
+  const b=document.getElementById("trackBtn");
+  b.textContent=st.tracking?"ON":"OFF";b.classList.toggle("on",st.tracking);
+  document.getElementById("trackHint").textContent=st.tracking
+   ?"Telescope is tracking at the sidereal rate."
+   :"With tracking off, the sky drifts west at the sidereal rate — watch the monitor.";
+}
+function toggleView(){
+  st.view=st.view==="finder"?"telescope":"finder";
+  const b=document.getElementById("viewBtn");
+  b.textContent=st.view.toUpperCase();b.classList.toggle("on",st.view==="telescope");
+  document.getElementById("fovTag").textContent=st.view==="finder"?"FINDER 2.5°":"TELESCOPE 15.0′";
+}
+
+/* ---------------- manual slewing ---------------- */
+let slewDir=null;
+document.querySelectorAll(".nsew button[data-dir]").forEach(b=>{
+  b.addEventListener("pointerdown",()=>{if(!st.slew)slewDir=b.dataset.dir;});
+  window.addEventListener("pointerup",()=>{slewDir=null;});
+});
+
+/* ---------------- hot-list slew state machine ----------------
+   nudge  : telescope starts moving toward the target (stars drift visibly)
+   transit: camera blanked, coordinates wind rapidly toward the field
+   settle : field reappears ~0.3° off; telescope glides onto the target      */
+const slewErrCache={};   // per-target pointing error, persistent for the session
+function slewToHot(){
+  if(st.slew)return;
+  const h=HOTLIST[+document.getElementById("hotSel").value];
+  if(st.view!=="finder")toggleView();               // acquire in the finder, as at a real telescope
+  const cosd=Math.cos(st.dec*Math.PI/180);
+  const dRA=(h.ra-st.ra)*15*cosd, dDec=h.dec-st.dec;
+  const dist=Math.hypot(dRA,dDec);                  // degrees
+  const dir={ra:Math.sign(h.ra-st.ra),dec:Math.sign(dDec)};
+  // realistic pointing error: 0-0.9 arcmin in a random direction. The error is
+  // cached per target, like a real pointing model — returning to the same star
+  // lands at the same spot; only a slew to a NEW target draws a fresh error.
+  let err=slewErrCache[h.name];
+  if(!err){
+    const offDeg=0.015*Math.random();
+    const ang=Math.random()*2*Math.PI;
+    err={dra:offDeg*Math.cos(ang)/15/Math.cos(h.dec*Math.PI/180),
+         ddec:offDeg*Math.sin(ang)};
+    slewErrCache[h.name]=err;
+  }
+  const land={ra:h.ra+err.dra,dec:h.dec+err.ddec};
+  // approach offset: arrive slightly off-target, opposite the direction of travel
+  const off=0.30;
+  const settleStart={
+    ra:land.ra-(dir.ra||1)*off/15/Math.cos(land.dec*Math.PI/180),
+    dec:land.dec-(dir.dec||1)*off*0.6,
+  };
+  st.slew={
+    phase:dist<0.8?"settle":"nudge",
+    t:0, targetName:h.name, target:land,
+    dir, settleStart,
+    nudgeDur:1.1,
+    transitDur:Math.min(6,Math.max(2,dist*0.12)),
+    transFrom:null,
+  };
+  if(st.slew.phase==="settle"){/* short hop: just glide */}
+  setSlewLock(true);
+  document.getElementById("specStatus").textContent="Slewing to "+h.name+" …";
+}
+function setSlewLock(on){
+  document.getElementById("slewBtn").disabled=on;
+  document.querySelectorAll(".nsew button[data-dir]").forEach(b=>b.disabled=on);
+}
+function slewTick(dt){
+  const s=st.slew;if(!s)return;
+  s.t+=dt;
+  if(s.phase==="nudge"){
+    const rate=0.22; // deg/s — visible drift toward the target
+    st.ra +=(s.dir.ra||0)*rate*dt/15/Math.cos(st.dec*Math.PI/180);
+    st.dec+=(s.dir.dec||0)*rate*dt*0.6;
+    if(s.t>=s.nudgeDur){s.phase="transit";s.t=0;s.transFrom={ra:st.ra,dec:st.dec};}
+  }else if(s.phase==="transit"){
+    const f=Math.min(1,s.t/s.transitDur);
+    const e=f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;   // ease in-out
+    st.ra =s.transFrom.ra +(s.settleStart.ra -s.transFrom.ra )*e;
+    st.dec=s.transFrom.dec+(s.settleStart.dec-s.transFrom.dec)*e;
+    if(f>=1){s.phase="settle";s.t=0;}
+  }else if(s.phase==="settle"){
+    const k=Math.min(1,dt*1.6); // exponential glide onto target
+    st.ra +=(s.target.ra -st.ra )*k;
+    st.dec+=(s.target.dec-st.dec)*k;
+    const cosd=Math.cos(st.dec*Math.PI/180);
+    const d=Math.hypot((s.target.ra-st.ra)*15*cosd,(s.target.dec-st.dec));
+    if(d<0.0006){ // ~2 arcsec
+      st.ra=s.target.ra;st.dec=s.target.dec;
+      st.slew=null;setSlewLock(false);
+      if(!st.tracking)toggleTracking();
+      document.getElementById("specStatus").textContent=
+        "Slew complete — "+s.targetName+" is near the field center. Switch to the Telescope view and center it in the slit if needed.";
+    }
+  }
+}
+
+/* ---------------- spectrometer ---------------- */
+const spec={running:false,counts:new Float64Array(NCH),total:0,secs:0,target:null,template:null,lastTargetKey:null};
+const sc=document.getElementById("specCanvas"),scx=sc.getContext("2d");
+function targetKey(o){return o?(o.name||o.raDeg.toFixed(4)+o.decDeg.toFixed(4)):"sky";}
+function specGo(){
+  if(st.domeAnim<0.98){document.getElementById("specStatus").textContent="The dome is closed. Open it first.";return;}
+  if(st.slew){document.getElementById("specStatus").textContent="Telescope is slewing — wait for it to settle.";return;}
+  if(st.view!=="telescope"){document.getElementById("specStatus").textContent="Switch the view to Telescope — the spectrometer slit is only in the narrow-field focal plane.";return;}
+  const obj=objectInSlit();
+  spec.target=obj;
+  if(obj){
+    spec.template=templateForT(obj.t);
+    document.getElementById("specStatus").textContent=
+      "Integrating on "+(obj.name||("field star V="+obj.mag.toFixed(1)))+" …";
+  }else{
+    spec.template=null;
+    document.getElementById("specStatus").textContent="No object in slit — integrating on blank sky (noise only).";
+  }
+  if(!spec.running&&spec.secs>0&&spec.lastTargetKey!==targetKey(obj)){
+    spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;
+  }
+  spec.lastTargetKey=targetKey(obj);
+  spec.running=true;
+  document.getElementById("goBtn").disabled=true;
+  document.getElementById("stopBtn").disabled=false;
+  document.getElementById("saveBtn").disabled=true;
+}
+function specStop(){
+  spec.running=false;
+  document.getElementById("goBtn").disabled=false;
+  document.getElementById("stopBtn").disabled=true;
+  document.getElementById("saveBtn").disabled=spec.total<=0;
+  document.getElementById("specStatus").textContent="Integration paused. Press Go to add more counts, or save.";
+}
+function poisson(mu){
+  if(mu>25)return Math.max(0,Math.round(mu+randn()*Math.sqrt(mu)));
+  let L=Math.exp(-mu),k=0,p=1;
+  do{k++;p*=Math.random();}while(p>L);
+  return k-1;
+}
+function specTick(dt){
+  if(!spec.running)return;
+  spec.secs+=dt;
+  const D=APERTURE,skyRate=0.4*D*D;
+  let objBase=0;
+  const cur=objectInSlit();
+  if(spec.template&&cur&&targetKey(cur)===spec.lastTargetKey){
+    const V=cur.mag??cur.V;
+    objBase=60*Math.pow(10,-0.4*(V-8))*(D*D/(0.9*0.9));
+  }else if(spec.template&&!cur){
+    document.getElementById("specStatus").textContent="Object has drifted out of the slit — only sky photons arriving.";
+  }
+  for(let i=0;i<NCH;i++){
+    const mu=dt*(skyRate+(spec.template?objBase*spec.template[i]:0));
+    const c=poisson(mu);
+    spec.counts[i]+=c;spec.total+=c;
+  }
+  const perCh=spec.total/NCH;
+  document.getElementById("phCount").textContent=Math.round(spec.total).toLocaleString();
+  document.getElementById("phChan").textContent=perCh.toFixed(1);
+  document.getElementById("intSec").textContent=spec.secs.toFixed(1);
+  const sky=skyRate*spec.secs,sig=Math.max(0,perCh-sky);
+  document.getElementById("snrOut").textContent=(sig/Math.sqrt(Math.max(perCh,1))).toFixed(1);
+}
+function drawSpec(){
+  const W=sc.width,H=sc.height,pad=34;
+  scx.fillStyle="#04121a";scx.fillRect(0,0,W,H);
+  scx.strokeStyle="#123240";scx.lineWidth=1;
+  scx.strokeRect(pad,8,W-pad-8,H-30);
+  scx.fillStyle="#3f7d8c";scx.font="10px 'IBM Plex Mono'";
+  for(let wl=3700;wl<=4700;wl+=100){
+    const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-8);
+    scx.fillText(wl,x-12,H-8);
+    scx.beginPath();scx.moveTo(x,H-22);scx.lineTo(x,H-26);scx.stroke();
+  }
+  scx.save();scx.translate(10,H/2);scx.rotate(-Math.PI/2);
+  scx.fillText("REL. INTENSITY",-40,0);scx.restore();
+  let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
+  if(mx<=0)return;
+  scx.fillStyle="#6fd3e0";scx.strokeStyle="#6fd3e0";
+  const y0=8,hgt=H-38;
+  if(spec.running){
+    for(let i=0;i<NCH;i++){
+      const x=pad+i/(NCH-1)*(W-pad-8),y=y0+hgt*(1-spec.counts[i]/mx);
+      scx.fillRect(x,y,1.5,1.5);
+    }
+  }else{
+    scx.beginPath();
+    for(let i=0;i<NCH;i++){
+      const x=pad+i/(NCH-1)*(W-pad-8),y=y0+hgt*(1-spec.counts[i]/mx);
+      i?scx.lineTo(x,y):scx.moveTo(x,y);
+    }
+    scx.stroke();
+  }
+}
+const savedSpectra=[];
+function saveSpectrum(){
+  let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
+  const data=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++)data[i]=spec.counts[i]/mx;
+  const name=(spec.target?(spec.target.name||"Field star V="+(spec.target.mag??spec.target.V).toFixed(1)):"Blank sky")
+    +" · "+spec.secs.toFixed(0)+"s";
+  const snr=+document.getElementById("snrOut").textContent;
+  savedSpectra.push({name,data,snr,hiddenType:spec.target?tToType(spec.target.t):"—"});
+  refreshSavedUI();refreshUnknownSel();
+  document.getElementById("specStatus").textContent="Saved “"+name+"”. Open Classify Spectra to work on it.";
+  spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;spec.template=null;
+  document.getElementById("saveBtn").disabled=true;
+  document.getElementById("phCount").textContent="0";
+  document.getElementById("phChan").textContent="0.0";
+  document.getElementById("intSec").textContent="0.0";
+  document.getElementById("snrOut").textContent="0.0";
+}
+function refreshSavedUI(){
+  const el=document.getElementById("savedList");
+  el.innerHTML=savedSpectra.length?savedSpectra.map(s=>"· "+s.name+" (S/N "+s.snr+")").join("<br>"):"None yet.";
+}
+
+/* ---------------- main loop & clocks ---------------- */
+function frame(now){
+  const dt=Math.min(0.25,(now-st.lastFrame)/1000);st.lastFrame=now;
+  // dome shutters
+  const domeTarget=st.dome==="open"?1:0;
+  if(st.domeAnim!==domeTarget){
+    const dir=Math.sign(domeTarget-st.domeAnim);
+    st.domeAnim=Math.max(0,Math.min(1,st.domeAnim+dir*dt/3.5));  // ~3.5 s to open
+    document.getElementById("domeLed").classList.toggle("open",st.domeAnim>0.97);
+  }
+  // sidereal drift when not tracking (and not slewing)
+  if(!st.tracking&&!st.slew)st.ra+=dt*(1.0027379/3600);
+  // manual motion
+  if(slewDir&&!st.slew){
+    const rate=+document.getElementById("rateSel").value;
+    const step=dt*rate*(st.view==="finder"?0.02:0.0015);
+    if(slewDir==="N")st.dec+=step;
+    if(slewDir==="S")st.dec-=step;
+    if(slewDir==="E")st.ra+=step/15/Math.cos(st.dec*Math.PI/180);
+    if(slewDir==="W")st.ra-=step/15/Math.cos(st.dec*Math.PI/180);
+    st.dec=Math.max(-89.9,Math.min(89.9,st.dec));
+  }
+  slewTick(dt);
+  specTick(dt);
+  // the spectrometer is only usable in the Telescope view, dome open, not slewing
+  if(!spec.running){
+    document.getElementById("goBtn").disabled=
+      st.view!=="telescope"||st.domeAnim<0.98||!!st.slew;
+  }
+  if(document.getElementById("scr-obs").classList.contains("active")){
+    drawTV();drawSpec();
+    document.getElementById("raOut").textContent=fmtHMS(st.ra,1);
+    document.getElementById("decOut").textContent=fmtDMS(st.dec);
+    const o=objectInSlit();
+    document.getElementById("targOut").textContent=o?(o.name||("field V="+o.mag.toFixed(1))):"—";
+  }
+  requestAnimationFrame(frame);
+}
+setInterval(()=>{
+  const d=new Date();
+  document.getElementById("utClock").textContent=fmtHMS(d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600,0);
+  document.getElementById("lstClock").textContent=fmtHMS(lstHours(d),0);
+  document.getElementById("jdClock").textContent=julianDate(d).toFixed(6);
+},1000);
+
+/* ---------------- classification tool ---------------- */
+const cls={unknown:null,stdIdx:5,cursor:null};
+const cc=document.getElementById("clsCanvas"),ccx=cc.getContext("2d");
+function refreshUnknownSel(){
+  const sel=document.getElementById("unkSel");
+  const prev=sel.value;
+  sel.innerHTML="";
+  programSpectra.forEach((p,i)=>sel.add(new Option(p.name,"p"+i)));
+  savedSpectra.forEach((p,i)=>sel.add(new Option("★ "+p.name,"s"+i)));
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  loadUnknown();
+}
+function loadUnknown(){
+  const v=document.getElementById("unkSel").value;
+  cls.unknown=v&&v[0]==="p"?programSpectra[+v.slice(1)]:savedSpectra[+v.slice(1)];
+  if(typeof az!=="undefined"){az.sh1=null;az.sh2=null;az.result=null;az.cursor=null;cls.cursor=null;drawZoom();}
+  drawCls();
+}
+function buildAtlasUI(){
+  const ul=document.getElementById("atlasList");
+  ul.innerHTML="";
+  atlas.forEach((a,i)=>{
+    const li=document.createElement("li");
+    li.textContent=a.label+(a.star?"  ·  "+a.star:"");
+    li.onclick=()=>{cls.stdIdx=i;drawCls();
+      ul.querySelectorAll("li").forEach(x=>x.classList.remove("sel"));li.classList.add("sel");};
+    if(i===cls.stdIdx)li.classList.add("sel");
+    ul.appendChild(li);
+  });
+  /* classification choices are restricted to the atlas types */
+  const ts=document.getElementById("clsTypeSel");
+  ts.innerHTML="";
+  atlas.forEach(a=>ts.add(new Option(a.label,a.label)));
+}
+function plotTrace(data,x0,y0,w,h,color,zeroLine){
+  ccx.strokeStyle=color;ccx.lineWidth=1.1;ccx.beginPath();
+  for(let i=0;i<data.length;i++){
+    const x=x0+i/(data.length-1)*w;
+    const y=zeroLine?y0+h/2-data[i]*(h/2)/0.6:y0+h*(1-data[i]);
+    i?ccx.lineTo(x,y):ccx.moveTo(x,y);
+  }
+  ccx.stroke();
+  if(zeroLine){ccx.strokeStyle="#33465e";ccx.setLineDash([3,4]);
+    ccx.beginPath();ccx.moveTo(x0,y0+h/2);ccx.lineTo(x0+w,y0+h/2);ccx.stroke();ccx.setLineDash([]);}
+}
+function drawCls(){
+  const W=cc.width,H=cc.height,pad=44,ph=(H-60)/3;
+  ccx.fillStyle="#0d1420";ccx.fillRect(0,0,W,H);
+  ccx.font="11px 'IBM Plex Mono'";
+  const std=atlas[cls.stdIdx];
+  let diff=null;
+  if(cls.unknown){
+    diff=new Float64Array(NCH);
+    for(let i=0;i<NCH;i++)diff[i]=std.data[i]-cls.unknown.data[i];
+  }
+  const panels=[
+    {data:std.data,label:std.label+"  (standard)"+(std.star?"  ·  "+std.star:""),color:"#9fb6d8"},
+    {data:cls.unknown?cls.unknown.data:null,label:"UNKNOWN — "+(cls.unknown?cls.unknown.name:"none"),color:"#6fd3e0"},
+    {data:diff,label:"DIFFERENCE  ("+std.label+" − unknown)",color:"#e4573d",zero:true},
+  ];
+  panels.forEach((p,k)=>{
+    const y0=12+k*(ph+14);
+    ccx.strokeStyle="#1d2a3d";ccx.strokeRect(pad,y0,W-pad-10,ph);
+    ccx.fillStyle="#7d8aa0";ccx.fillText(p.label,pad+6,y0+13);
+    if(p.data)plotTrace(p.data,pad,y0,W-pad-10,ph,p.color,p.zero);
+  });
+  // highlight the analysis zoom window on the unknown (middle) panel
+  if(az.wl0>WL0+1||az.wl1<WL1-1){
+    const y0m=12+(ph+14);
+    const x0=pad+(az.wl0-WL0)/(WL1-WL0)*(W-pad-10);
+    const x1=pad+(az.wl1-WL0)/(WL1-WL0)*(W-pad-10);
+    ccx.fillStyle="rgba(255,180,84,.07)";ccx.fillRect(x0,y0m,x1-x0,ph);
+    ccx.strokeStyle="rgba(255,180,84,.45)";ccx.strokeRect(x0,y0m,x1-x0,ph);
+  }
+  ccx.fillStyle="#3f5a78";
+  for(let wl=3700;wl<=4700;wl+=100){
+    const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-10);
+    ccx.fillText(wl,x-12,H-6);
+  }
+  if(cls.cursor){
+    const x=pad+(cls.cursor.wl-WL0)/(WL1-WL0)*(W-pad-10);
+    ccx.strokeStyle="rgba(255,180,84,.7)";
+    ccx.beginPath();ccx.moveTo(x,10);ccx.lineTo(x,H-20);ccx.stroke();
+  }
+}
+cc.addEventListener("click",e=>{
+  const r=cc.getBoundingClientRect(),pad=44;
+  const x=(e.clientX-r.left)*(cc.width/r.width);
+  const frac=(x-pad)/(cc.width-pad-10);
+  if(frac<0||frac>1||!cls.unknown)return;
+  const i=Math.round(frac*(NCH-1));
+  cls.cursor={wl:WL0+i*DWL};
+  az.cursor=null;                       // one cursor at a time: this click owns it
+  document.getElementById("curWl").textContent=(WL0+i*DWL).toFixed(1);
+  document.getElementById("curInt").textContent=cls.unknown.data[i].toFixed(3);
+  drawCls();drawZoom();
+});
+function recordClassification(){
+  if(!cls.unknown)return;
+  const tb=document.querySelector("#resultsTable tbody");
+  const name=cls.unknown.name;
+  const val=document.getElementById("clsTypeSel").value;
+  const snr=cls.unknown.snr??"—";
+  // reclassifying the same object updates its row rather than adding a new one
+  let row=[...tb.rows].find(r=>r.cells[0].textContent===name);
+  if(!row){row=tb.insertRow();row.insertCell();row.insertCell();row.insertCell();}
+  row.cells[0].textContent=name;
+  row.cells[1].textContent=val;
+  row.cells[2].textContent=snr;
+}
+
+/* ---------------- analysis: line list, zoom, equivalent width ------------- */
+const LINE_TABLE=[
+  {wl:3819.6,id:"He I",   desc:"Neutral helium — a hot-star (B) line."},
+  {wl:3835.4,id:"H9",     desc:"High Balmer-series member; the series peaks near A0."},
+  {wl:3889.1,id:"H8+He I",desc:"Balmer H8, blended with He I 3889 in B stars."},
+  {wl:3933.7,id:"Ca II K",desc:"Grows steadily from A through K — the classic F–G–K temperature gauge. Compare with Hδ."},
+  {wl:3968.5,id:"Ca II H",desc:"Ca II H, blended with Balmer Hε 3970. Compare its depth with the K line."},
+  {wl:4026.2,id:"He I",   desc:"Strongest near B2; gone by early A. A clean hot-star diagnostic."},
+  {wl:4045.8,id:"Fe I",   desc:"Neutral iron. The Fe 4045 / Hδ ratio separates F stars from A stars."},
+  {wl:4077.0,id:"Sr II",  desc:"Ionized strontium — luminosity-sensitive in F–G stars (stronger in giants and supergiants)."},
+  {wl:4101.7,id:"Hδ",     desc:"Balmer line; deepest and broadest near A0 dwarfs."},
+  {wl:4143.8,id:"He I",   desc:"Neutral helium of the B sequence."},
+  {wl:4226.7,id:"Ca I",   desc:"Neutral calcium; strengthens rapidly through K and into M."},
+  {wl:4271.8,id:"Fe I",   desc:"Iron blend; grows toward cooler types."},
+  {wl:4305.0,id:"G band", desc:"Molecular CH absorption — the hallmark of G stars; visible F5 through K5."},
+  {wl:4325.8,id:"Fe I",   desc:"Iron blend beside Hγ. The Fe 4325 / Hγ ratio tracks F–G temperature."},
+  {wl:4340.5,id:"Hγ",     desc:"Balmer line; peaks near A0. Weakens toward both O and M."},
+  {wl:4383.5,id:"Fe I",   desc:"Iron line; a useful F–K temperature indicator."},
+  {wl:4387.9,id:"He I",   desc:"Neutral helium; B stars."},
+  {wl:4471.5,id:"He I",   desc:"Strong He I. Compare with Mg II 4481: the ratio classifies late-B stars."},
+  {wl:4481.2,id:"Mg II",  desc:"Ionized magnesium. He I 4471 / Mg II 4481 is the classic late-B ratio."},
+  {wl:4541.6,id:"He II",  desc:"Ionized helium — O stars only."},
+  {wl:4584.0,id:"TiO",    desc:"Titanium-oxide band head; TiO bands define the M sequence."},
+  {wl:4685.7,id:"He II",  desc:"Ionized helium; its presence is definitive of an O star."},
+];
+const az={wl0:WL0,wl1:WL1,ewMode:false,sh1:null,sh2:null,result:null,selLine:null,cursor:null};
+const zc=document.getElementById("zoomCanvas"),zcx=zc.getContext("2d");
+const ZPAD=44;
+function idxOf(wl){return Math.max(0,Math.min(NCH-1,Math.round((wl-WL0)/DWL)));}
+function azClamp(){
+  let w=Math.max(40,Math.min(WL1-WL0,az.wl1-az.wl0));
+  if(az.wl0<WL0)az.wl0=WL0;
+  if(az.wl0+w>WL1)az.wl0=WL1-w;
+  az.wl1=az.wl0+w;
+}
+function azZoom(f){const c=(az.wl0+az.wl1)/2,w=(az.wl1-az.wl0)*f;az.wl0=c-w/2;az.wl1=c+w/2;azClamp();drawZoom();drawCls();}
+function azPan(s){const w=az.wl1-az.wl0;az.wl0+=s*w*0.25;az.wl1+=s*w*0.25;azClamp();drawZoom();drawCls();}
+function azReset(){az.wl0=WL0;az.wl1=WL1;az.selLine=null;clearEW(false);drawZoom();drawCls();}
+function azCenterOn(wl){const w=Math.min(az.wl1-az.wl0,160);az.wl0=wl-w/2;az.wl1=wl+w/2;azClamp();drawZoom();drawCls();}
+function toggleEW(){
+  az.ewMode=!az.ewMode;
+  document.getElementById("ewBtn").classList.toggle("on",az.ewMode);
+  if(az.ewMode){az.sh1=null;az.sh2=null;az.result=null;
+    document.getElementById("ewOut").textContent="EW mode: click the continuum at the LEFT shoulder of the line.";}
+  drawZoom();
+}
+function clearEW(redraw=true){
+  az.sh1=null;az.sh2=null;az.result=null;az.ewMode=false;
+  document.getElementById("ewBtn").classList.remove("on");
+  document.getElementById("ewOut").textContent=
+    "Zoom into a line, press “Measure EW”, then click the continuum on the left and right shoulders of the line.";
+  if(redraw)drawZoom();
+}
+function shoulderLevel(i){
+  const F=cls.unknown.data;let s=0,n=0;
+  for(let j=Math.max(0,i-1);j<=Math.min(NCH-1,i+1);j++){s+=F[j];n++;}
+  return s/n;
+}
+/* Pseudo-continuum equivalent width: a straight line is drawn between the two
+   shoulder points, and EW = Σ (1 − F/F_cont) Δλ across the region — the same
+   quick-look method the VIREO tool used. */
+function computeEW(){
+  const F=cls.unknown.data;
+  const a=Math.min(az.sh1,az.sh2),b=Math.max(az.sh1,az.sh2);
+  const ia=idxOf(a),ib=idxOf(b);
+  if(ib-ia<3){
+    document.getElementById("ewOut").textContent="Shoulders are too close together — pick a wider region.";
+    az.sh1=null;az.sh2=null;return;
+  }
+  const c1=shoulderLevel(ia),c2=shoulderLevel(ib);
+  let ew=0,minR=1e9,minWl=a;
+  for(let i=ia;i<=ib;i++){
+    const c=c1+(c2-c1)*(i-ia)/(ib-ia);
+    if(c<=1e-6)continue;
+    const r=F[i]/c;
+    ew+=(1-r)*DWL;
+    if(r<minR){minR=r;minWl=WL0+i*DWL;}
+  }
+  let id=null,bd=6;
+  for(const L of LINE_TABLE){const d=Math.abs(L.wl-minWl);if(d<bd){bd=d;id=L.id+" "+L.wl.toFixed(0);}}
+  az.result={ia,ib,c1,c2,ew,center:minWl};
+  az.ewMode=false;
+  document.getElementById("ewBtn").classList.remove("on");
+  document.getElementById("ewOut").textContent=
+    "Line center ≈ "+minWl.toFixed(1)+" Å"+(id?"  ["+id+"]":"")+
+    "  ·  shoulders "+a.toFixed(1)+"–"+b.toFixed(1)+" Å  ·  Equivalent width = "+ew.toFixed(2)+" Å"+
+    (ew<0?"  (negative — emission, or a shoulder sits inside the line)":"");
+  drawZoom();
+}
+function drawZoom(){
+  const W=zc.width,H=zc.height,pad=ZPAD;
+  zcx.fillStyle="#04121a";zcx.fillRect(0,0,W,H);
+  zcx.strokeStyle="#123240";zcx.lineWidth=1;zcx.strokeRect(pad,8,W-pad-8,H-30);
+  zcx.save();zcx.translate(10,H/2);zcx.rotate(-Math.PI/2);
+  zcx.fillStyle="#3f7d8c";zcx.font="10px 'IBM Plex Mono'";zcx.fillText("REL. INTENSITY",-40,0);zcx.restore();
+  if(!cls.unknown){
+    zcx.fillStyle="#3f7d8c";zcx.font="12px 'IBM Plex Mono'";
+    zcx.fillText("no unknown loaded",pad+10,H/2);return;
+  }
+  const F=cls.unknown.data,i0=idxOf(az.wl0),i1=idxOf(az.wl1);
+  let lo=1e9,hi=-1e9;
+  for(let i=i0;i<=i1;i++){lo=Math.min(lo,F[i]);hi=Math.max(hi,F[i]);}
+  const span=Math.max(1e-3,hi-lo);lo-=span*0.08;hi+=span*0.12;
+  const X=wl=>pad+(wl-az.wl0)/(az.wl1-az.wl0)*(W-pad-8);
+  const Y=v=>8+(H-38)*(1-(v-lo)/(hi-lo));
+  const wspan=az.wl1-az.wl0;
+  const step=wspan>600?100:wspan>250?50:wspan>120?20:wspan>50?10:5;
+  zcx.fillStyle="#3f7d8c";zcx.font="10px 'IBM Plex Mono'";
+  for(let wl=Math.ceil(az.wl0/step)*step;wl<=az.wl1;wl+=step){
+    const x=X(wl);zcx.fillText(wl,x-14,H-8);
+    zcx.strokeStyle="#123240";zcx.beginPath();zcx.moveTo(x,H-22);zcx.lineTo(x,H-26);zcx.stroke();
+  }
+  /* line markers: the checkbox shows the whole table; a line chosen from the
+     Spectral Lines menu is always marked, even with the checkbox off */
+  const showAll=document.getElementById("lineChk").checked;
+  let stag=0;
+  for(const L of LINE_TABLE){
+    if(L.wl<az.wl0||L.wl>az.wl1)continue;
+    const isSel=az.selLine===L;
+    if(!showAll&&!isSel)continue;
+    const x=X(L.wl);
+    zcx.strokeStyle=isSel?"rgba(255,180,84,.95)":"rgba(255,180,84,.30)";
+    zcx.setLineDash([3,4]);zcx.beginPath();zcx.moveTo(x,26);zcx.lineTo(x,H-24);zcx.stroke();zcx.setLineDash([]);
+    zcx.fillStyle=isSel?"#ffb454":"#8a6430";zcx.font="10px 'IBM Plex Mono'";
+    zcx.fillText(L.id,x+2,17+(stag%2)*9);stag++;
+  }
+  if(az.result){
+    const r=az.result;
+    const cont=i=>r.c1+(r.c2-r.c1)*(i-r.ia)/(r.ib-r.ia);
+    zcx.beginPath();
+    for(let i=r.ia;i<=r.ib;i++){const x=X(WL0+i*DWL),y=Y(F[i]);i>r.ia?zcx.lineTo(x,y):zcx.moveTo(x,y);}
+    for(let i=r.ib;i>=r.ia;i--)zcx.lineTo(X(WL0+i*DWL),Y(cont(i)));
+    zcx.closePath();zcx.fillStyle="rgba(228,87,61,.20)";zcx.fill();
+    zcx.strokeStyle="rgba(126,226,154,.9)";zcx.setLineDash([5,4]);zcx.beginPath();
+    zcx.moveTo(X(WL0+r.ia*DWL),Y(r.c1));zcx.lineTo(X(WL0+r.ib*DWL),Y(r.c2));zcx.stroke();zcx.setLineDash([]);
+    for(const i of[r.ia,r.ib]){
+      const x=X(WL0+i*DWL);
+      zcx.strokeStyle="rgba(126,226,154,.9)";zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
+    }
+    const xc=X(r.center);
+    zcx.fillStyle="#e4573d";zcx.beginPath();
+    zcx.moveTo(xc-4,H-24);zcx.lineTo(xc+4,H-24);zcx.lineTo(xc,H-31);zcx.closePath();zcx.fill();
+  }else if(az.sh1!=null){
+    const x=X(az.sh1);
+    zcx.strokeStyle="rgba(126,226,154,.9)";zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
+  }
+  zcx.strokeStyle="#6fd3e0";zcx.lineWidth=1.2;zcx.beginPath();
+  for(let i=i0;i<=i1;i++){
+    const x=X(WL0+i*DWL),y=Y(F[i]);
+    i>i0?zcx.lineTo(x,y):zcx.moveTo(x,y);
+  }
+  zcx.stroke();
+  if(az.cursor!=null&&az.cursor>=az.wl0&&az.cursor<=az.wl1){
+    const x=X(az.cursor);
+    zcx.strokeStyle="rgba(255,180,84,.75)";zcx.lineWidth=1;
+    zcx.beginPath();zcx.moveTo(x,10);zcx.lineTo(x,H-24);zcx.stroke();
+  }
+}
+zc.addEventListener("click",e=>{
+  if(!cls.unknown)return;
+  const rct=zc.getBoundingClientRect();
+  const x=(e.clientX-rct.left)*(zc.width/rct.width);
+  const frac=(x-ZPAD)/(zc.width-ZPAD-8);
+  if(frac<0||frac>1)return;
+  const wl=az.wl0+frac*(az.wl1-az.wl0),i=idxOf(wl);
+  az.cursor=WL0+i*DWL;                  // one cursor at a time: this click owns it
+  cls.cursor=null;
+  document.getElementById("curWl").textContent=(WL0+i*DWL).toFixed(1);
+  document.getElementById("curInt").textContent=cls.unknown.data[i].toFixed(3);
+  if(az.ewMode){
+    if(az.sh1==null){
+      az.sh1=WL0+i*DWL;
+      document.getElementById("ewOut").textContent=
+        "Left shoulder set at "+az.sh1.toFixed(1)+" Å — now click the continuum at the RIGHT shoulder.";
+    }else{
+      az.sh2=WL0+i*DWL;computeEW();
+    }
+  }
+  drawZoom();drawCls();
+});
+function buildLineUI(){
+  const ul=document.getElementById("lineList");ul.innerHTML="";
+  LINE_TABLE.forEach(L=>{
+    const li=document.createElement("li");
+    li.textContent=L.wl.toFixed(1)+" Å  ·  "+L.id;
+    li.onclick=()=>{
+      az.selLine=L;
+      ul.querySelectorAll("li").forEach(x=>x.classList.remove("sel"));
+      li.classList.add("sel");
+      document.getElementById("lineHelp").textContent=L.id+" λ"+L.wl.toFixed(1)+" — "+L.desc;
+      azCenterOn(L.wl);
+    };
+    ul.appendChild(li);
+  });
+}
+
+/* ---------------- screen switching & init ---------------- */
+function showScreen(id){
+  for(const k of["obs","cls"]){
+    document.getElementById("scr-"+k).classList.toggle("active",id===k);
+    document.getElementById("tab"+k[0].toUpperCase()+k.slice(1)).classList.toggle("active",id===k);
+  }
+  if(id==="cls"){drawCls();drawZoom();}
+}
+(function init(){
+  const hs=document.getElementById("hotSel");
+  HOTLIST.forEach((h,i)=>hs.add(new Option(h.name+"  (V="+h.V.toFixed(1)+")",i)));
+  regenProgramSpectra();
+  buildAtlasUI();buildLineUI();refreshUnknownSel();refreshSavedUI();
+  if(window.JACOBY_ATLAS)registerJacobyAtlas(window.JACOBY_ATLAS);  // enables the toggle; synthetic stays active
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
