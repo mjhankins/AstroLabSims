@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Educational Observatory · Hubble's Law</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0a0d13; --panel:#141a24; --panel-2:#1b2330; --line:#2a3546;
+    --amber:#ffb454; --amber-dim:#8a6430; --cyan:#6fd3e0; --red:#e4573d;
+    --green:#7ee29a; --text:#cdd6e4; --text-dim:#7d8aa0;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --disp:'Rajdhani',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--night);color:var(--text);font-family:var(--sans);font-size:14px}
+  header{display:flex;align-items:baseline;gap:18px;padding:14px 22px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.14em;color:#fff}
+  header h1 span{color:var(--amber)}
+  header .sub{font-size:12px;color:var(--text-dim);letter-spacing:.06em}
+  nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  nav button,nav a.navlink{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.1em;background:transparent;
+    color:var(--text-dim);border:1px solid var(--line);padding:7px 14px;cursor:pointer;border-radius:3px;
+    text-decoration:none;display:inline-block}
+  nav button.active{color:var(--night);background:var(--amber);border-color:var(--amber)}
+  nav button:focus-visible,nav a.navlink:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .screen{display:none;padding:16px 22px 30px;max-width:1180px;margin:0 auto}
+  .screen.active{display:block}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px}
+  .panel h3{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;color:var(--text-dim);
+    text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+  .readout{font-family:var(--mono);color:var(--amber);background:#0d0a04;border:1px solid #3a2d12;
+    border-radius:3px;padding:3px 8px;letter-spacing:.08em;text-shadow:0 0 6px rgba(255,180,84,.45);
+    font-size:15px;display:inline-block;min-width:110px;text-align:right}
+  .readout.big{font-size:20px;min-width:150px}
+  .readout.green{color:var(--green);border-color:#1e4029;text-shadow:0 0 6px rgba(126,226,154,.4)}
+  .readout.cyan{color:var(--cyan);border-color:#123240;text-shadow:0 0 6px rgba(111,211,224,.4)}
+  .lbl{font-size:11px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:2px}
+  button.ctrl{font-family:var(--disp);font-weight:600;letter-spacing:.08em;background:var(--panel-2);color:var(--text);
+    border:1px solid var(--line);border-radius:3px;padding:6px 12px;cursor:pointer;font-size:13px}
+  button.ctrl:hover{border-color:var(--amber-dim)}
+  button.ctrl:disabled{opacity:.35;cursor:default}
+  button.ctrl.on{background:var(--amber);color:var(--night);border-color:var(--amber)}
+  button.ctrl:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  select,input[type=text],input[type=number]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:3px;
+    padding:5px 8px;font-family:var(--mono);font-size:13px}
+  select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  input[type=range]{accent-color:var(--amber)}
+  .obs-grid{display:grid;grid-template-columns:minmax(430px,1fr) 300px;gap:14px;align-items:start;
+    grid-template-areas:"tv dome" "tv side" "spec side"}
+  #obsTv{grid-area:tv}
+  #domePanel{grid-area:dome}
+  #obsSide{grid-area:side}
+  #specPanel{grid-area:spec}
+  .tv-wrap{position:relative}
+  #tvCanvas{background:#000;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
+  .tv-tag{position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    letter-spacing:.1em;pointer-events:none}
+  .tv-tag b{color:var(--amber)}
+  .clock-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .coord-row{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+  .nsew{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,36px);gap:5px;justify-content:center;margin:8px 0}
+  .nsew button{font-family:var(--disp);font-weight:700;font-size:15px}
+  .nsew .blank{visibility:hidden}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spread{justify-content:space-between}
+  .dome-switch{display:flex;align-items:center;gap:10px}
+  .dome-led{width:10px;height:10px;border-radius:50%;background:#5a1f14;box-shadow:0 0 4px rgba(228,87,61,.6)}
+  .dome-led.open{background:var(--green);box-shadow:0 0 6px rgba(126,226,154,.8)}
+  #specCanvas{background:#04121a;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
+  .spec-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
+  /* ---- measurement screen: single column ---- */
+  .mez-stack{display:flex;flex-direction:column;gap:14px}
+  #mezCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
+  .wlbox{width:110px}
+  .zbox{width:96px}
+  table.data{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  table.data th,table.data td{border:1px solid var(--line);padding:4px 6px;text-align:right;white-space:nowrap}
+  table.data th{color:var(--text-dim);font-weight:500;letter-spacing:.05em;position:sticky;top:0;background:var(--panel-2)}
+  table.data td:first-child,table.data th:first-child{text-align:left}
+  #tableWrap{max-height:300px;overflow:auto;margin-top:6px}
+  td button.mini{font-family:var(--mono);font-size:11px;background:transparent;color:var(--red);border:1px solid var(--line);
+    border-radius:3px;cursor:pointer;padding:1px 6px}
+  .eq{font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.8;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:3px;padding:8px 10px;margin-top:8px}
+  .eq b{color:var(--amber);font-weight:500}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  /* ---- hubble diagram screen ---- */
+  .hub-grid{display:grid;grid-template-columns:minmax(500px,1fr) 300px;gap:14px;align-items:start}
+  #hubCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
+  footer{padding:18px 22px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--line);max-width:1180px;margin:0 auto;line-height:1.6}
+  footer details{margin-top:6px}
+  footer summary{cursor:pointer;color:var(--cyan);width:fit-content}
+  footer summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  footer details p{margin-top:6px}
+  .cat-badge{font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;display:inline-block;margin-top:8px;line-height:1.4}
+  .cat-badge.hubble{background:#3a2d12;color:var(--amber)}
+  .cat-badge.full{background:#153826;color:var(--green)}
+  .tooltab{display:flex;gap:6px;margin-bottom:10px}
+  .tooltab button{flex:1}
+  .hint{color:var(--text-dim);font-size:12px;line-height:1.55;margin-top:6px}
+  .statusline{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:8px;min-height:16px}
+  @media (max-width:920px){
+    .obs-grid{grid-template-columns:1fr;grid-template-areas:"dome" "tv" "side" "spec"}
+    .hub-grid{grid-template-columns:1fr}
+    .twocol{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OPEN EDUCATIONAL <span>OBSERVATORY</span></h1>
+  <div class="sub">Hubble's Law · the redshift–distance relation</div>
+  <nav>
+    <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
+    <button id="tabMez" onclick="showScreen('mez')">Measure Redshift</button>
+    <button id="tabHub" onclick="showScreen('hub')">Hubble Diagram</button>
+    <a class="navlink" href="../">Homepage</a>
+  </nav>
+</header>
+
+<!-- ============ OBSERVATORY ============ -->
+<section id="scr-obs" class="screen active">
+  <div class="clock-row">
+    <div><span class="lbl">Universal Time</span><span class="readout big" id="utClock">--:--:--</span></div>
+    <div><span class="lbl">Local Sidereal Time</span><span class="readout big" id="lstClock">--:--:--</span></div>
+    <div><span class="lbl">Julian Date</span><span class="readout" id="jdClock" style="min-width:160px">-------.------</span></div>
+    <div style="margin-left:auto"><span class="lbl">Site · 4.0 m Telescope</span><span class="readout green" style="min-width:200px">KPNO-like · 31°57′N 111°36′W</span></div>
+  </div>
+
+  <div class="obs-grid">
+    <div id="obsTv">
+      <div class="tv-wrap">
+        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b id="fovTag">FINDER 2.5°</b></div>
+      </div>
+      <div class="coord-row">
+        <div><span class="lbl">Right Ascension</span><span class="readout big" id="raOut">--:--:--.-</span></div>
+        <div><span class="lbl">Declination</span><span class="readout big" id="decOut">±--°--′--″</span></div>
+        <div style="margin-left:auto"><span class="lbl">Nearest object</span><span class="readout" id="targOut" style="min-width:180px">—</span></div>
+      </div>
+    </div>
+
+      <div id="specPanel" class="panel">
+        <h3>Photon-Counting Spectrometer · 3700–7000 Å</h3>
+        <canvas id="specCanvas" width="720" height="240"></canvas>
+        <div class="spec-stats">
+          <div><span class="lbl">Photon count</span><span class="readout" id="phCount">0</span></div>
+          <div><span class="lbl">Photons / channel</span><span class="readout" id="phChan">0.0</span></div>
+          <div><span class="lbl">Integration (s)</span><span class="readout" id="intSec">0.0</span></div>
+          <div><span class="lbl">Signal / noise</span><span class="readout green" id="snrOut">0.0</span></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+            <button class="ctrl" id="goBtn" onclick="specGo()">▸ Go</button>
+            <button class="ctrl" id="stopBtn" onclick="specStop()" disabled>■ Stop</button>
+            <button class="ctrl" id="saveBtn" onclick="saveSpectrum()" disabled>Save spectrum</button>
+          </div>
+        </div>
+        <div class="statusline" id="specStatus">Open the dome, turn on tracking, and center a galaxy between the slit jaws.</div>
+      </div>
+
+      <div class="panel" id="domePanel">
+        <h3>Dome &amp; Telescope</h3>
+        <div class="row spread">
+          <div class="dome-switch">
+            <div class="dome-led" id="domeLed"></div>
+            <span class="lbl" style="margin:0">Dome</span>
+          </div>
+          <button class="ctrl" id="domeBtn" onclick="toggleDome()">OPEN DOME</button>
+        </div>
+        <div class="row spread" style="margin-top:10px">
+          <span class="lbl" style="margin:0">Tracking</span>
+          <button class="ctrl" id="trackBtn" onclick="toggleTracking()">OFF</button>
+        </div>
+        <div class="row spread" style="margin-top:6px">
+          <span class="lbl" style="margin:0">View</span>
+          <button class="ctrl" id="viewBtn" onclick="toggleView()">FINDER</button>
+        </div>
+        <p class="hint" id="trackHint">With tracking off, the sky drifts west at the sidereal rate — watch the monitor.</p>
+      </div>
+
+    <div class="stack" id="obsSide">
+
+      <div class="panel">
+        <h3>Telescope Motion</h3>
+        <div class="nsew">
+          <button class="blank"></button><button class="ctrl" data-dir="N">N</button><button class="blank"></button>
+          <button class="ctrl" data-dir="E">E</button><button class="blank"></button><button class="ctrl" data-dir="W">W</button>
+          <button class="blank"></button><button class="ctrl" data-dir="S">S</button><button class="blank"></button>
+        </div>
+        <div class="row spread">
+          <span class="lbl" style="margin:0">Slew rate</span>
+          <select id="rateSel" aria-label="Slew rate">
+            <option value="1">1×</option><option value="2">2×</option><option value="4">4×</option>
+            <option value="8" selected>8×</option><option value="16">16×</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Field List · Galaxy Clusters</h3>
+        <select id="hotSel" style="width:100%" aria-label="Cluster field list"></select>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to field</button>
+          <button class="ctrl" id="catBtn" onclick="toggleCatalog()">Use full catalog</button>
+        </div>
+        <div class="cat-badge hubble" id="catBadge">Catalog: Hubble program · 6 fields</div>
+        <p class="hint" id="catHint">The six clusters of the classic Hubble–Humason program.</p>
+        <p class="hint">Observe at least one galaxy per field — nearer clusters show large fuzzy galaxies;
+          the most distant members can look nearly star-like.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Spectra</h3>
+        <div id="savedList" class="hint" style="font-family:var(--mono)">None yet.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MEASURE REDSHIFT ============ -->
+<section id="scr-mez" class="screen">
+  <div class="mez-stack">
+    <div class="panel">
+      <h3>Galaxy Spectrum</h3>
+      <div class="row">
+        <select id="mezSel" style="flex:1;min-width:260px" onchange="loadMez()" aria-label="Galaxy spectrum"></select>
+        <div><span class="lbl">Apparent mag m</span><span class="readout" id="mezMag">--.--</span></div>
+        <div><span class="lbl">S/N</span><span class="readout green" id="mezSnr">--</span></div>
+      </div>
+      <p class="hint"><b>First, classify:</b> is this an <i>elliptical</i> spectrum (absorption lines on a red continuum with a
+        strong break near 4000 Å) or a <i>star-forming</i> one (emission spikes on a blue continuum)? For ellipticals,
+        start by measuring the Ca K &amp; H line centers yourself with the <b>Line measurement</b> tool. The
+        <b>Template fit</b> tool works for both kinds: pick the matching template and slide the redshift until every marker
+        sits in a line at once — the pattern stretches as it slides, since lines move to λ<sub>rest</sub> × (1+z).</p>
+    </div>
+
+    <div>
+      <canvas id="mezCanvas" width="1080" height="440"></canvas>
+      <div class="row" style="margin-top:8px">
+        <button class="ctrl" onclick="mzZoom(0.6)">Zoom in</button>
+        <button class="ctrl" onclick="mzZoom(1/0.6)">Zoom out</button>
+        <button class="ctrl" onclick="mzPan(-1)">◀ Pan</button>
+        <button class="ctrl" onclick="mzPan(1)">Pan ▶</button>
+        <button class="ctrl" onclick="mzReset()">Reset</button>
+        <label class="hint" style="margin:0;display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="restChk" onchange="drawMez()" checked> rest-λ &amp; sky markers</label>
+        <div style="margin-left:auto"><span class="lbl">Cursor λ (Å)</span><span class="readout cyan" id="mezCurWl">----.-</span></div>
+      </div>
+      <p class="hint">The dashed gray markers never move: the K/H/G rest wavelengths, and the [O I] 5577 Å airglow line —
+        emission from Earth's own atmosphere, which appears at zero redshift in every spectrum you take.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Redshift Measurement</h3>
+      <div class="tooltab">
+        <button class="ctrl on" id="toolLineBtn" onclick="setMezTool('line')">Line measurement</button>
+        <button class="ctrl" id="toolTplBtn" onclick="setMezTool('tpl')">Template fit</button>
+      </div>
+
+      <div id="tplTool" style="display:none">
+        <div class="row">
+          <label><span class="lbl">Template</span>
+            <select id="tplSel" onchange="setTemplate()" aria-label="Line template"></select></label>
+          <div><span class="lbl">cz (km/s)</span><span class="readout" id="czOut">0</span></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="range" id="zSlider" min="0" max="0.25" step="0.0001" value="0" style="flex:1;min-width:200px" oninput="zFromSlider()" aria-label="Redshift">
+          <label><span class="lbl">z</span>
+            <input type="number" class="zbox" id="zBox" min="0" max="0.25" step="0.0001" value="0.0000" oninput="zFromBox()"></label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" onclick="zNudge(-0.001)">−−</button>
+          <button class="ctrl" onclick="zNudge(-0.0001)">−</button>
+          <button class="ctrl" onclick="zNudge(0.0001)">+</button>
+          <button class="ctrl" onclick="zNudge(0.001)">++</button>
+          <button class="ctrl on" style="margin-left:auto" onclick="adoptTemplate()">Adopt template redshift</button>
+        </div>
+        <p class="hint">A correct fit puts <i>every</i> marker in a line simultaneously. If only one marker matches, you may have
+          the wrong template — or the wrong line. Beyond z ≈ 0.066, Hα slides past the red end of the spectrometer;
+          this is why real surveys lean on [O II] and Ca K/H at large distances.</p>
+      </div>
+
+      <div id="lineTool">
+        <div class="row">
+          <button class="ctrl" onclick="setLine('K')">Cursor → K line</button>
+          <label><span class="lbl">λ<sub>K</sub> measured</span>
+            <input type="number" class="wlbox" id="wlK" step="0.1" oninput="calcMez()"></label>
+          <button class="ctrl" onclick="setLine('H')">Cursor → H line</button>
+          <label><span class="lbl">λ<sub>H</sub> measured</span>
+            <input type="number" class="wlbox" id="wlH" step="0.1" oninput="calcMez()"></label>
+          <button class="ctrl" onclick="clearLines()">Clear</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><span class="lbl">Δλ K (Å)</span><span class="readout" id="dlK" style="min-width:70px">--</span></div>
+          <div><span class="lbl">Δλ H (Å)</span><span class="readout" id="dlH" style="min-width:70px">--</span></div>
+          <div><span class="lbl">v from K (km/s)</span><span class="readout" id="vK">--</span></div>
+          <div><span class="lbl">v from H (km/s)</span><span class="readout" id="vH">--</span></div>
+        </div>
+        <div class="eq">
+          <b>(A)</b> log D = (m − M + 5) / 5, with M = −22 assumed (D in parsecs)<br>
+          <b>(B)</b> Δλ = λ<sub>measured</sub> − λ<sub>rest</sub> &nbsp;·&nbsp; K 3933.7 Å · H 3968.5 Å<br>
+          <b>(C)</b> v = c · Δλ / λ<sub>rest</sub> = c · z, with c = 3.00 × 10⁵ km/s
+        </div>
+        <p class="hint">The classic worksheet method — measure the Ca K &amp; H line centers directly, or use it to verify a
+          template fit (drag on the spectrum for the crosshair, zoom in for an accurate center; K is the
+          shorter-wavelength line of the pair).</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Adopted Measurement &amp; Data Table</h3>
+      <div class="row">
+        <div><span class="lbl">Velocity to record (km/s)</span><span class="readout green" id="candV">--</span></div>
+        <div><span class="lbl">Redshift z</span><span class="readout" id="candZ">--</span></div>
+        <div><span class="lbl">Method</span><span class="readout" id="candMethod" style="min-width:130px">—</span></div>
+        <div><span class="lbl">Distance (Mpc)</span><span class="readout green" id="dMpc">--</span></div>
+        <button class="ctrl" style="margin-left:auto" id="recBtn" onclick="recordRow()" disabled>Record → data table</button>
+        <button class="ctrl" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div id="tableWrap">
+        <table class="data" id="dataTable">
+          <thead><tr><th>Galaxy</th><th>m</th><th>Method</th><th>Type</th><th>z</th><th>v (km/s)</th><th>D (Mpc)</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint">Record at least one galaxy from each field, then open the Hubble Diagram tab. Recording two or three
+        galaxies per cluster and comparing them is a good way to see — and beat down — the scatter.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HUBBLE DIAGRAM ============ -->
+<section id="scr-hub" class="screen">
+  <div class="hub-grid">
+    <div>
+      <canvas id="hubCanvas" width="760" height="520"></canvas>
+      <p class="hint">Each point is a galaxy from your data table: recession velocity against distance. Real points scatter —
+        galaxies have their own motions within clusters of hundreds of km/s on top of the cosmic expansion, and the
+        standard-candle assumption (M = −22 for every galaxy) is only approximately true. Fit the trend, not any single point.</p>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <h3>Fit Your Line</h3>
+        <span class="lbl">Slope H₀ (km/s/Mpc)</span>
+        <div class="row">
+          <input type="range" id="hSlider" min="20" max="150" step="0.5" value="55" style="flex:1" oninput="hFromSlider()">
+          <input type="number" id="hBox" min="20" max="150" step="0.5" value="55" style="width:80px" oninput="hFromBox()">
+        </div>
+        <p class="hint">Drag the slider until the line through the origin best follows your points. The slope of that line
+          <i>is</i> the Hubble parameter.</p>
+        <div class="row" style="margin-top:6px">
+          <div><span class="lbl">RMS scatter about line</span><span class="readout" id="rmsOut" style="min-width:140px">--</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Age of the Universe</h3>
+        <p class="hint" style="margin-top:0">If every galaxy has always receded at its present speed, then the time since
+          they were all together is T = D / v = 1 / H₀. Converting units (1 Mpc = 3.09 × 10¹⁹ km; 3.15 × 10⁷ s per year):</p>
+        <div class="eq">T = 1 / H₀ ≈ 978 / H₀ &nbsp;[Gyr, with H₀ in km/s/Mpc]</div>
+        <div class="row" style="margin-top:8px">
+          <div><span class="lbl">Expansion age</span><span class="readout green big" id="ageOut" style="min-width:180px">-- Gyr</span></div>
+        </div>
+        <p class="hint">This estimate assumes the expansion rate has never changed — see the lab guide for what goes
+          into it and how it compares with other methods.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Part of the <a href="../" style="color:var(--cyan)">Open Educational Observatory</a> — see the homepage for project
+  credits, lineage, and license.
+  <details>
+    <summary>More about this simulation</summary>
+    <p>All galaxies, spectra, and photometry here are <b>simulated for instruction</b> — cluster names and recession
+      velocities follow the historic Hubble–Humason survey fields, but nothing in this activity is a source of research
+      measurements. Velocities use the classical Doppler formula v = cz; at the largest redshifts here (z ≈ 0.2) the
+      relativistic correction is real but is ignored for pedagogy.</p>
+  </details>
+</footer>
+
+<script>
+"use strict";
+/* =====================================================================
+   OPEN EDUCATIONAL OBSERVATORY — Hubble's Law — v0.2 (demo)
+   time · sky/starfield/galaxy clusters · dome · telescope (animated slews)
+   photon-counting spectrometer · elliptical + star-forming galaxy spectra
+   template-fit & line-click redshift measurement · Hubble diagram
+   ===================================================================== */
+/* ---------------- time & site ---------------- */
+const SITE={lonDeg:-111.6,latDeg:31.96};
+function julianDate(d){return d.getTime()/86400000+2440587.5;}
+function lstHours(d){
+  const jd=julianDate(d),T=(jd-2451545.0)/36525.0;
+  let g=280.46061837+360.98564736629*(jd-2451545.0)+0.000387933*T*T;
+  g=((g%360)+360)%360; let l=g+SITE.lonDeg; l=((l%360)+360)%360; return l/15;
+}
+function fmtHMS(h,prec=1){
+  h=((h%24)+24)%24;
+  const H=Math.floor(h),m=(h-H)*60,M=Math.floor(m),s=(m-M)*60;
+  return String(H).padStart(2,"0")+":"+String(M).padStart(2,"0")+":"+s.toFixed(prec).padStart(prec?5:2,"0");
+}
+function fmtDMS(deg){
+  const sign=deg<0?"−":"+";deg=Math.abs(deg);
+  const D=Math.floor(deg),m=(deg-D)*60,M=Math.floor(m),S=Math.round((m-M)*60);
+  return sign+String(D).padStart(2,"0")+"°"+String(M).padStart(2,"0")+"′"+String(S).padStart(2,"0")+"″";
+}
+
+/* ---------------- constants ---------------- */
+const WL0=3700, WL1=7000, NCH=1651, DWL=(WL1-WL0)/(NCH-1);   // 2.0 Å/channel
+const C_KMS=2.998e5;
+const M_ABS=-22;              // assumed absolute magnitude of a bright cluster galaxy
+const H0_TRUE=70;             // km/s/Mpc — the value baked into the simulated sky
+const REST_K=3933.7, REST_H=3968.5, REST_G=4304.4;
+const APERTURE=4.0;
+
+/* deterministic PRNG so every session sees the same sky (reproducible for grading) */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296;};}
+const RNG=mulberry32(20260710);
+function rnorm(rng){let u=0,v=0;while(!u)u=rng();while(!v)v=rng();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+/* ---------------- galaxy clusters ----------------
+   "classic" fields are the Hubble–Humason program; the extended fields
+   fill the distance ladder following Humason's 1936 velocity list.
+   spiralFrac sets how many members are star-forming (emission-line) systems —
+   most clusters are elliptical-dominated, but Hercules is famously spiral-rich. */
+const CLUSTER_DEFS=[
+  {name:"Virgo",           ra:12.45, dec: 12.7, cz: 1150, sigma:550, n:6, classic:true,  spiralFrac:0.33},
+  {name:"Pegasus",         ra:23.34, dec:  8.2, cz: 3800, sigma:500, n:6, classic:false, spiralFrac:0.33},
+  {name:"Perseus",         ra: 3.33, dec: 41.5, cz: 5200, sigma:900, n:6, classic:false, spiralFrac:0.17},
+  {name:"Coma Berenices",  ra:13.00, dec: 27.9, cz: 6700, sigma:900, n:7, classic:true,  spiralFrac:0.15},
+  {name:"Hercules",        ra:16.09, dec: 17.7, cz:10800, sigma:750, n:8, classic:false, spiralFrac:0.63},
+  {name:"Ursa Major I",    ra:11.75, dec: 55.9, cz:15400, sigma:700, n:6, classic:true,  spiralFrac:0.17},
+  {name:"Leo",             ra:10.75, dec: 19.5, cz:19600, sigma:800, n:6, classic:false, spiralFrac:0.17},
+  {name:"Corona Borealis", ra:15.37, dec: 27.7, cz:21600, sigma:800, n:6, classic:true,  spiralFrac:0},
+  {name:"Gemini",          ra: 6.65, dec: 20.0, cz:23300, sigma:800, n:6, classic:false, spiralFrac:0.17},
+  {name:"Boötes",          ra:14.53, dec: 31.7, cz:39200, sigma:900, n:6, classic:true,  spiralFrac:0},
+  {name:"Ursa Major II",   ra:10.95, dec: 56.6, cz:40400, sigma:900, n:6, classic:false, spiralFrac:0},
+  {name:"Hydra",           ra:10.60, dec:-27.5, cz:60600, sigma:900, n:6, classic:true,  spiralFrac:0},
+];
+const GALAXIES=[];
+(function buildClusters(){
+  for(const cl of CLUSTER_DEFS){
+    const D_Mpc=cl.cz/H0_TRUE;
+    /* display size floors at the Boötes scale so the most distant members
+       stay comfortably visible on the TV monitor */
+    const sizeDeg=Math.max(0.0015,(15/(D_Mpc*1000))*57.2958);
+    const spread=Math.min(0.8,Math.max(0.08,40*sizeDeg));
+    cl.spread=spread;
+    const nSF=Math.round(cl.n*cl.spiralFrac);
+    for(let k=0;k<cl.n;k++){
+      const dx=rnorm(RNG)*spread*0.35, dy=rnorm(RNG)*spread*0.35;
+      const raDeg=cl.ra*15+dx/Math.cos(cl.dec*Math.PI/180), decDeg=cl.dec+dy;
+      const cz=cl.cz+rnorm(RNG)*cl.sigma;
+      const z=cz/C_KMS;
+      const m=M_ABS+5*Math.log10(D_Mpc*1e6)-5+rnorm(RNG)*0.25;
+      const rh=Math.floor(raDeg/15),rm=Math.round((raDeg/15-rh)*60);
+      const dsgn=decDeg<0?"−":"+",dd=Math.floor(Math.abs(decDeg)),dm=Math.round((Math.abs(decDeg)-dd)*60);
+      const name="OEO J"+String(rh).padStart(2,"0")+String(Math.min(59,rm)).padStart(2,"0")
+        +dsgn+String(dd).padStart(2,"0")+String(Math.min(59,dm)).padStart(2,"0");
+      GALAXIES.push({name,cluster:cl.name,raDeg,decDeg,m,z,gtype:k<nSF?"sf":"ell",
+        sizeDeg:sizeDeg*(0.75+0.5*RNG()),ell:0.25+0.45*RNG(),pa:RNG()*Math.PI,
+        armPhase:RNG()*2*Math.PI,chir:RNG()<0.5?-1:1,kind:"galaxy"});
+    }
+  }
+})();
+
+/* ---------------- spectra ---------------- */
+function planck(T,wl){const l=wl*1e-10,h=6.626e-34,c=3e8,k=1.381e-23;
+  return 1/(Math.pow(l,5)*(Math.exp(h*c/(l*k*T))-1));}
+function gauss(wl,l0,s){const x=(wl-l0)/s;return Math.abs(x)<5?Math.exp(-0.5*x*x):0;}
+
+/* early-type (elliptical) rest-frame template: old stars, 4000 Å break, absorption */
+const ELL_ABS=[ // [rest λ, depth, sigma Å]
+  [3933.7,0.72,6.0],[3968.5,0.62,6.5],[4101.7,0.20,5.0],[4226.7,0.18,4.5],
+  [4304.4,0.42,8.0],[4340.5,0.16,5.0],[4383.5,0.18,5.0],[4861.3,0.22,5.5],
+  [5175.4,0.34,9.0],[5270.0,0.18,8.0],[5892.9,0.28,7.0]];
+function ellRest(wl){
+  let f=planck(4800,wl)/planck(4800,5200);
+  f*=0.55+0.45/(1+Math.exp(-(wl-4000)/45));
+  for(const[l0,d,s]of ELL_ABS)f*=1-d*gauss(wl,l0,s);
+  return f;
+}
+/* star-forming (spiral/irregular) rest-frame template: blue continuum,
+   weak absorption, strong nebular emission */
+const SF_ABS=[[3933.7,0.22,5.5],[3968.5,0.20,5.5],[4101.7,0.14,5.0],[4304.4,0.10,8.0],
+  [4340.5,0.12,5.0],[5175.4,0.10,9.0]];
+const SF_EM=[  // [rest λ, amplitude rel. continuum, sigma Å]
+  [3727.4,1.10,4.0],[4340.5,0.14,4.0],[4861.3,0.50,4.0],[4958.9,0.45,4.0],
+  [5006.8,1.30,4.0],[6548.1,0.15,4.0],[6562.8,2.00,4.5],[6583.5,0.50,4.0],
+  [6716.4,0.25,4.0],[6730.8,0.18,4.0]];
+function sfRest(wl){
+  let f=planck(9500,wl)/planck(9500,5200);
+  f*=0.82+0.18/(1+Math.exp(-(wl-4000)/45));   // much weaker break
+  for(const[l0,d,s]of SF_ABS)f*=1-d*gauss(wl,l0,s);
+  let e=0;
+  for(const[l0,a,s]of SF_EM)e+=a*gauss(wl,l0,s);
+  return f*(1+e);
+}
+function galTemplate(z,gtype){
+  const rest=gtype==="sf"?sfRest:ellRest;
+  const out=new Float64Array(NCH); let mean=0;
+  for(let i=0;i<NCH;i++){const wl=WL0+i*DWL;out[i]=rest(wl/(1+z));mean+=out[i];}
+  mean/=NCH; // normalize to MEAN 1: magnitude fixes total flux, not peak flux
+  for(let i=0;i<NCH;i++)out[i]/=mean;
+  return out;
+}
+/* a foreground Milky Way star (z = 0) — faint field stars can fool you */
+const STAR_LINES=[[3933.7,0.55,4.5],[3968.5,0.5,4.5],[4101.7,0.35,4.5],[4304.4,0.3,7],
+  [4340.5,0.38,4.5],[4861.3,0.45,5.0],[5175.4,0.2,8],[5892.9,0.3,6],[6562.8,0.5,5]];
+function starTemplate(){
+  const out=new Float64Array(NCH);let mx=0;
+  for(let i=0;i<NCH;i++){
+    const wl=WL0+i*DWL;let f=planck(5300,wl)/planck(5300,5200);
+    for(const[l0,d,s]of STAR_LINES)f*=1-d*gauss(wl,l0,s);
+    out[i]=f;mx+=f;
+  }
+  mx/=NCH;
+  for(let i=0;i<NCH;i++)out[i]/=mx;
+  return out;
+}
+const STAR_TPL=starTemplate();
+/* the night sky: faint continuum plus airglow emission — the [O I] lines sit
+   at zero redshift in EVERY spectrum, exactly as at a real telescope */
+const SKY_TPL=new Float64Array(NCH);
+let SKY_MEAN=0;
+(function buildSky(){
+  for(let i=0;i<NCH;i++){
+    const wl=WL0+i*DWL;
+    SKY_TPL[i]=0.4*(1+10*gauss(wl,5577.3,2.5)+3*gauss(wl,6300.3,2.5));
+    SKY_MEAN+=SKY_TPL[i];
+  }
+  SKY_MEAN/=NCH;
+})();
+function noisify(clean,snr){
+  const out=new Float64Array(clean.length);
+  for(let i=0;i<clean.length;i++)
+    out[i]=Math.max(0,clean[i]+(randn()*Math.sqrt(Math.max(clean[i],0.02))/snr));
+  let mx=0;for(const v of out)mx=Math.max(mx,v);
+  for(let i=0;i<out.length;i++)out[i]/=mx;
+  return out;
+}
+
+/* pre-observed practice spectra: one absorption, one emission */
+const savedSpectra=[];
+(function practice(){
+  const g1=GALAXIES.find(g=>g.cluster==="Virgo"&&g.gtype==="ell");
+  const g2=GALAXIES.find(g=>g.cluster==="Hercules"&&g.gtype==="sf");
+  for(const[g,snr]of[[g1,25],[g2,16]]){
+    savedSpectra.push({name:"Practice · "+g.name+" ("+g.cluster+")",m:g.m,snr,
+      data:noisify(galTemplate(g.z,g.gtype),snr),practice:true});
+  }
+})();
+
+/* ---------------- telescope & dome state ---------------- */
+/* parked position: deliberately on empty sky — use the field list to get around */
+const st={
+  ra:8.40, dec:18.0,
+  tracking:false, view:"finder",
+  dome:"closed", domeAnim:0,
+  slew:null,
+  lastFrame:performance.now(),
+};
+
+/* ---------------- procedural background star field ---------------- */
+function hash3(a,b,c){let h=(a*374761393+b*668265263+c*2246822519)|0;
+  h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296;}
+const CELL=0.25;
+function starsInCell(cx,cy){
+  const n=3+Math.floor(hash3(cx,cy,1)*7),arr=[];
+  for(let k=0;k<n;k++){
+    const u1=hash3(cx,cy,10+k*3),u2=hash3(cx,cy,11+k*3),u3=hash3(cx,cy,12+k*3);
+    const mag=6.5+7.5*Math.pow(u3,0.45);
+    arr.push({raDeg:cx*CELL+u1*CELL,decDeg:cy*CELL+u2*CELL,mag,kind:"star",name:null});
+  }
+  return arr;
+}
+function visibleObjects(fovDeg){
+  const ra0=st.ra*15,dec0=st.dec;
+  const half=fovDeg/2/Math.cos(dec0*Math.PI/180),halfD=fovDeg/2,out=[];
+  const cx0=Math.floor((ra0-half)/CELL),cx1=Math.floor((ra0+half)/CELL);
+  const cy0=Math.floor((dec0-halfD)/CELL),cy1=Math.floor((dec0+halfD)/CELL);
+  for(let cx=cx0;cx<=cx1;cx++)for(let cy=cy0;cy<=cy1;cy++)
+    for(const s of starsInCell(cx,cy))out.push(s);
+  for(const g of GALAXIES){
+    if(Math.abs(g.decDeg-dec0)<2&&Math.abs((g.raDeg-ra0)*Math.cos(dec0*Math.PI/180))<2)out.push(g);
+  }
+  return out;
+}
+
+/* ---------------- TV rendering ---------------- */
+const tv=document.getElementById("tvCanvas"),tvx=tv.getContext("2d");
+function fovNow(){return st.view==="finder"?2.5:0.25;}
+/* a resolvable star-forming galaxy: inclined disk, logarithmic arms with
+   bright knots (HII regions), and a dominant warm central bulge.
+   SPIRAL_STYLES holds a small population of geometries; each galaxy picks
+   one deterministically from its arm-phase seed, so nearby fields show a mix
+   of spiral types rather than clones. Parameters:
+     arms  — number of arms
+     T     — total winding angle (radians): larger = more tightly wound
+     r0    — arm starting radius as a fraction of the galaxy radius
+     w0,w1 — arm half-width at start/end (fractions of galaxy radius)
+     armAlpha, fade — arm surface brightness and how fast it fades outward
+     bulge — bulge radius as a fraction of the galaxy radius              */
+const SPIRAL_STYLES=[
+  /* grand design */   {arms:2,T:3.9,r0:0.21,w0:0.15,w1:0.07,armAlpha:0.17,fade:0.10,bulge:0.36,tmax:1.0},
+  /* tightly wound */  {arms:2,T:5.6,r0:0.19,w0:0.12,w1:0.06,armAlpha:0.18,fade:0.10,bulge:0.38,tmax:1.0},
+  /* flocculent */     {arms:4,T:3.2,r0:0.24,w0:0.11,w1:0.06,armAlpha:0.15,fade:0.09,bulge:0.35,tmax:0.85},
+];
+function spiralStyleOf(g){return SPIRAL_STYLES[Math.floor(g.armPhase/(2*Math.PI)*SPIRAL_STYLES.length)%SPIRAL_STYLES.length];}
+function drawSpiral(x,y,rPx,ell,pa,alpha,phase,chir,styleOverride){
+  const S=styleOverride||SPIRAL_STYLES[0];
+  tvx.save();tvx.translate(x,y);tvx.rotate(pa);tvx.scale(1,Math.max(0.3,1-ell));
+  /* faint blue disk */
+  let g=tvx.createRadialGradient(0,0,0,0,0,rPx);
+  g.addColorStop(0,"rgba(210,224,252,"+(0.45*alpha)+")");
+  g.addColorStop(0.55,"rgba(190,208,245,"+(0.16*alpha)+")");
+  g.addColorStop(1,"rgba(180,200,240,0)");
+  tvx.fillStyle=g;tvx.beginPath();tvx.arc(0,0,rPx,0,7);tvx.fill();
+  /* arms: sampled finely, emitting a blob whenever we have moved far enough
+     from the previous one — constant overlap, so the arm stays continuous
+     even where the log spiral runs fast at large radius */
+  const k=Math.log(0.95/S.r0)/S.T;
+  for(let arm=0;arm<S.arms;arm++){
+    let lastX=1e9,lastY=1e9;
+    for(let t=0;t<=S.tmax+1e-4;t+=0.004){
+      const th=chir*(t*S.T)+phase+arm*2*Math.PI/S.arms;
+      const r=rPx*S.r0*Math.exp(k*t*S.T);
+      const ax=r*Math.cos(th),ay=r*Math.sin(th);
+      const sR=rPx*(S.w0-(S.w0-S.w1)*t);
+      if(Math.hypot(ax-lastX,ay-lastY)<sR*0.6)continue;
+      lastX=ax;lastY=ay;
+      const a=alpha*(S.armAlpha-S.fade*t);
+      /* soft-edged blob: a radial gradient rather than a hard circle, so
+         overlapping blobs blend into a continuous ribbon at any zoom */
+      let ag=tvx.createRadialGradient(ax,ay,0,ax,ay,sR*1.35);
+      ag.addColorStop(0,"rgba(222,234,255,"+a.toFixed(3)+")");
+      ag.addColorStop(0.55,"rgba(222,234,255,"+(a*0.55).toFixed(3)+")");
+      ag.addColorStop(1,"rgba(222,234,255,0)");
+      tvx.fillStyle=ag;tvx.beginPath();tvx.arc(ax,ay,sR*1.35,0,7);tvx.fill();
+      /* occasional bright knot along the arm */
+      if(((arm*97+Math.round(t*250))%29)<3){
+        ag=tvx.createRadialGradient(ax,ay,0,ax,ay,sR*0.6);
+        ag.addColorStop(0,"rgba(240,248,255,"+Math.min(1,a*1.5).toFixed(3)+")");
+        ag.addColorStop(1,"rgba(240,248,255,0)");
+        tvx.fillStyle=ag;tvx.beginPath();tvx.arc(ax,ay,sR*0.6,0,7);tvx.fill();
+      }
+    }
+  }
+  /* bulge: two layers, bright enough to dominate the inner arms */
+  g=tvx.createRadialGradient(0,0,0,0,0,rPx*S.bulge);
+  g.addColorStop(0,"rgba(255,246,228,"+Math.min(1,1.3*alpha)+")");
+  g.addColorStop(0.4,"rgba(255,240,214,"+Math.min(1,0.85*alpha)+")");
+  g.addColorStop(1,"rgba(252,234,206,0)");
+  tvx.fillStyle=g;tvx.beginPath();tvx.arc(0,0,rPx*S.bulge,0,7);tvx.fill();
+  g=tvx.createRadialGradient(0,0,0,0,0,rPx*S.bulge*0.45);
+  g.addColorStop(0,"rgba(255,253,246,"+Math.min(1,1.6*alpha)+")");
+  g.addColorStop(0.6,"rgba(255,248,232,"+Math.min(1,0.9*alpha)+")");
+  g.addColorStop(1,"rgba(255,244,222,0)");
+  tvx.fillStyle=g;tvx.beginPath();tvx.arc(0,0,rPx*S.bulge*0.45,0,7);tvx.fill();
+  tvx.restore();
+}
+function drawGalaxy(x,y,rPx,ell,pa,alpha,gtype){
+  tvx.save();tvx.translate(x,y);tvx.rotate(pa);tvx.scale(1,1-ell);
+  const g=tvx.createRadialGradient(0,0,0,0,0,rPx);
+  if(gtype==="sf"){ // star-forming systems run bluer
+    g.addColorStop(0,"rgba(224,236,255,"+Math.min(1,alpha)+")");
+    g.addColorStop(0.25,"rgba(200,218,248,"+(0.55*alpha)+")");
+    g.addColorStop(1,"rgba(185,205,240,0)");
+  }else{
+    g.addColorStop(0,"rgba(255,236,210,"+Math.min(1,alpha)+")");
+    g.addColorStop(0.25,"rgba(245,220,190,"+(0.55*alpha)+")");
+    g.addColorStop(1,"rgba(230,205,175,0)");
+  }
+  tvx.fillStyle=g;tvx.beginPath();tvx.arc(0,0,rPx,0,7);tvx.fill();
+  tvx.restore();
+}
+function drawTV(){
+  const W=tv.width,H=tv.height;
+  tvx.fillStyle="#000";tvx.fillRect(0,0,W,H);
+  const domeOpen=st.domeAnim;
+  const transit=st.slew&&st.slew.phase==="transit";
+
+  if(domeOpen>0.02&&!transit){
+    const fov=fovNow(),scale=H/fov,ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180);
+    const starLim=st.view==="finder"?11.5:14, galLim=st.view==="finder"?18.6:19.2;
+    for(const s of visibleObjects(fov*1.2)){
+      const x=W/2-((s.raDeg-ra0)*cosd)*scale, y=H/2-((s.decDeg-dec0))*scale;
+      if(x<-30||x>W+30||y<-30||y>H+30)continue;
+      if(s.kind==="galaxy"){
+        if(s.m>galLim)continue;
+        const rPx=Math.max(1.4,s.sizeDeg*scale*2.2);
+        const alpha=Math.max(0.25,Math.min(1,(galLim-s.m)*0.22+0.25));
+        if(s.gtype==="sf"&&rPx>=9)   // spiral structure only when resolvable
+          drawSpiral(x,y,rPx,s.ell,s.pa,alpha,s.armPhase,s.chir,spiralStyleOf(s));
+        else
+          drawGalaxy(x,y,rPx,s.ell,s.pa,alpha,s.gtype);
+      }else{
+        if(s.mag>starLim)continue;
+        const r=Math.max(0.7,(starLim-s.mag)*(st.view==="finder"?0.55:1.5));
+        const g=tvx.createRadialGradient(x,y,0,x,y,r*2.4);
+        g.addColorStop(0,"#fff3d6");g.addColorStop(0.4,"#fff3d6");g.addColorStop(1,"transparent");
+        tvx.fillStyle=g;tvx.beginPath();tvx.arc(x,y,r*2.4,0,7);tvx.fill();
+      }
+    }
+    if(st.view==="finder"){
+      const box=(0.25/fov)*H;
+      tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1;
+      tvx.strokeRect(W/2-box/2,H/2-box/2,box,box);
+    }else{
+      tvx.strokeStyle="rgba(228,87,61,.95)";tvx.lineWidth=2;tvx.beginPath();
+      tvx.moveTo(W/2-7,H/2-26);tvx.lineTo(W/2-7,H/2+26);
+      tvx.moveTo(W/2+7,H/2-26);tvx.lineTo(W/2+7,H/2+26);tvx.stroke();
+    }
+  }
+
+  if(transit){
+    tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
+    tvx.strokeStyle="rgba(111,211,224,.08)";
+    for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
+    tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
+    tvx.textAlign="left";
+  }
+
+  if(domeOpen<0.995){
+    const gap=(W/2)*domeOpen;
+    tvx.fillStyle="#11151d";
+    tvx.fillRect(0,0,W/2-gap,H); tvx.fillRect(W/2+gap,0,W/2-gap,H);
+    tvx.strokeStyle="#232d3e";tvx.lineWidth=2;
+    tvx.beginPath();tvx.moveTo(W/2-gap,0);tvx.lineTo(W/2-gap,H);
+    tvx.moveTo(W/2+gap,0);tvx.lineTo(W/2+gap,H);tvx.stroke();
+    tvx.fillStyle="#1b2330";
+    for(let y=20;y<H;y+=48){
+      if(W/2-gap>24)tvx.fillRect(18,y,4,4);
+      if(W/2-gap>24)tvx.fillRect(W/2-gap-24,y,4,4);
+      if(W/2+gap<W-24)tvx.fillRect(W/2+gap+20,y,4,4);
+      tvx.fillRect(W-24,y,4,4);
+    }
+    if(domeOpen<0.03){
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.fillText("DOME CLOSED",W/2,H/2);
+      tvx.font="12px 'IBM Plex Mono'";
+      tvx.fillText("open the dome to see the sky",W/2,H/2+22);
+      tvx.textAlign="left";
+    }
+  }
+
+  const vg=tvx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.75);
+  vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,0.5)");
+  tvx.fillStyle=vg;tvx.fillRect(0,0,W,H);
+}
+
+/* nearest object to the slit; galaxies also return how well-centered the slit is */
+function objectInSlit(){
+  if(st.domeAnim<0.9||st.slew)return null;
+  const ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180);
+  let best=null,bd=1e9;
+  for(const s of visibleObjects(0.3)){
+    const d=Math.hypot((s.raDeg-ra0)*cosd,(s.decDeg-dec0));
+    if(d<bd){bd=d;best=s;}
+  }
+  if(!best)return null;
+  if(best.kind==="galaxy"){
+    const tol=Math.max(0.006,best.sizeDeg*1.6);
+    if(bd>=tol)return null;
+    const sig=Math.max(0.003,best.sizeDeg*0.55);
+    return{obj:best,frac:Math.exp(-0.5*(bd/sig)*(bd/sig))};
+  }
+  const tol=st.view==="finder"?0.05:0.004;
+  return bd<tol?{obj:best,frac:1}:null;
+}
+
+/* ---------------- dome / tracking / view controls ---------------- */
+function toggleDome(){
+  st.dome=st.dome==="open"?"closed":"open";
+  document.getElementById("domeBtn").textContent=st.dome==="open"?"CLOSE DOME":"OPEN DOME";
+}
+function toggleTracking(){
+  st.tracking=!st.tracking;
+  const b=document.getElementById("trackBtn");
+  b.textContent=st.tracking?"ON":"OFF";b.classList.toggle("on",st.tracking);
+  document.getElementById("trackHint").textContent=st.tracking
+   ?"Telescope is tracking at the sidereal rate."
+   :"With tracking off, the sky drifts west at the sidereal rate — watch the monitor.";
+}
+function toggleView(){
+  st.view=st.view==="finder"?"telescope":"finder";
+  const b=document.getElementById("viewBtn");
+  b.textContent=st.view.toUpperCase();b.classList.toggle("on",st.view==="telescope");
+  document.getElementById("fovTag").textContent=st.view==="finder"?"FINDER 2.5°":"TELESCOPE 15.0′";
+}
+
+/* ---------------- manual slewing ---------------- */
+let slewDir=null;
+document.querySelectorAll(".nsew button[data-dir]").forEach(b=>{
+  b.addEventListener("pointerdown",()=>{if(!st.slew)slewDir=b.dataset.dir;});
+  window.addEventListener("pointerup",()=>{slewDir=null;});
+});
+
+/* ---------------- field list & catalog toggle ---------------- */
+let catalog="hubble";   // "hubble" (classic program) or "full"
+function fieldsNow(){return CLUSTER_DEFS.filter(c=>catalog==="full"||c.classic);}
+function buildFieldUI(){
+  const sel=document.getElementById("hotSel");
+  sel.innerHTML="";
+  fieldsNow().forEach((c,i)=>{
+    sel.add(new Option(c.name+"  ·  "+fmtHMS(c.ra,0).slice(0,5)+" "+fmtDMS(c.dec).slice(0,4),i));
+  });
+  document.getElementById("catBtn").textContent=catalog==="hubble"?"Use full catalog":"Use Hubble catalog";
+  const badge=document.getElementById("catBadge");
+  badge.textContent=catalog==="hubble"?"Catalog: Hubble program · 6 fields":"Catalog: full survey · 12 fields";
+  badge.classList.toggle("hubble",catalog==="hubble");
+  badge.classList.toggle("full",catalog==="full");
+  document.getElementById("catHint").textContent=catalog==="hubble"
+    ?"The six clusters of the classic Hubble–Humason program."
+    :"Twelve fields, adding Humason's later survey clusters — including spiral-rich Hercules.";
+}
+function toggleCatalog(){catalog=catalog==="hubble"?"full":"hubble";buildFieldUI();}
+
+/* ---------------- field slew state machine ---------------- */
+const slewErrCache={};
+function slewToHot(){
+  if(st.slew)return;
+  const h=fieldsNow()[+document.getElementById("hotSel").value];
+  if(!h)return;
+  if(st.view!=="finder")toggleView();
+  const cosd=Math.cos(st.dec*Math.PI/180);
+  const dRA=(h.ra-st.ra)*15*cosd, dDec=h.dec-st.dec;
+  const dist=Math.hypot(dRA,dDec);
+  const dir={ra:Math.sign(h.ra-st.ra),dec:Math.sign(dDec)};
+  let err=slewErrCache[h.name];
+  if(!err){
+    const offDeg=0.015*Math.random();
+    const ang=Math.random()*2*Math.PI;
+    err={dra:offDeg*Math.cos(ang)/15/Math.cos(h.dec*Math.PI/180),
+         ddec:offDeg*Math.sin(ang)};
+    slewErrCache[h.name]=err;
+  }
+  const land={ra:h.ra+err.dra,dec:h.dec+err.ddec};
+  const off=0.30;
+  const settleStart={
+    ra:land.ra-(dir.ra||1)*off/15/Math.cos(land.dec*Math.PI/180),
+    dec:land.dec-(dir.dec||1)*off*0.6,
+  };
+  st.slew={
+    phase:dist<0.8?"settle":"nudge",
+    t:0, targetName:h.name+" field", target:land,
+    dir, settleStart,
+    nudgeDur:1.1,
+    transitDur:Math.min(6,Math.max(2,dist*0.12)),
+    transFrom:null,
+  };
+  setSlewLock(true);
+  document.getElementById("specStatus").textContent="Slewing to the "+h.name+" field …";
+}
+function setSlewLock(on){
+  document.getElementById("slewBtn").disabled=on;
+  document.querySelectorAll(".nsew button[data-dir]").forEach(b=>b.disabled=on);
+}
+function slewTick(dt){
+  const s=st.slew;if(!s)return;
+  s.t+=dt;
+  if(s.phase==="nudge"){
+    const rate=0.22;
+    st.ra +=(s.dir.ra||0)*rate*dt/15/Math.cos(st.dec*Math.PI/180);
+    st.dec+=(s.dir.dec||0)*rate*dt*0.6;
+    if(s.t>=s.nudgeDur){s.phase="transit";s.t=0;s.transFrom={ra:st.ra,dec:st.dec};}
+  }else if(s.phase==="transit"){
+    const f=Math.min(1,s.t/s.transitDur);
+    const e=f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+    st.ra =s.transFrom.ra +(s.settleStart.ra -s.transFrom.ra )*e;
+    st.dec=s.transFrom.dec+(s.settleStart.dec-s.transFrom.dec)*e;
+    if(f>=1){s.phase="settle";s.t=0;}
+  }else if(s.phase==="settle"){
+    const k=Math.min(1,dt*1.6);
+    st.ra +=(s.target.ra -st.ra )*k;
+    st.dec+=(s.target.dec-st.dec)*k;
+    const cosd=Math.cos(st.dec*Math.PI/180);
+    const d=Math.hypot((s.target.ra-st.ra)*15*cosd,(s.target.dec-st.dec));
+    if(d<0.0006){
+      st.ra=s.target.ra;st.dec=s.target.dec;
+      st.slew=null;setSlewLock(false);
+      if(!st.tracking)toggleTracking();
+      document.getElementById("specStatus").textContent=
+        "Slew complete — "+s.targetName+" centered. Pick a galaxy, switch to the Telescope view, and center its nucleus in the slit.";
+    }
+  }
+}
+
+/* ---------------- spectrometer ---------------- */
+const spec={running:false,counts:new Float64Array(NCH),total:0,secs:0,target:null,template:null,lastTargetKey:null,frac:1};
+const sc=document.getElementById("specCanvas"),scx=sc.getContext("2d");
+function targetKey(o){return o?(o.name||o.raDeg.toFixed(4)+o.decDeg.toFixed(4)):"sky";}
+/* count rate per channel. The exponent is deliberately compressed relative to a
+   strict flux scaling (0.89 instead of 1.0): bright Virgo members take a few
+   seconds instead of milliseconds, while the faintest Hydra members still cost
+   over a minute — the pedagogy of patience without the full pain. */
+function objRate(m){return 1060*Math.pow(10,-0.356*(m-10));}
+function specGo(){
+  if(st.domeAnim<0.98){document.getElementById("specStatus").textContent="The dome is closed. Open it first.";return;}
+  if(st.slew){document.getElementById("specStatus").textContent="Telescope is slewing — wait for it to settle.";return;}
+  if(st.view!=="telescope"){document.getElementById("specStatus").textContent="Switch the view to Telescope — the spectrometer slit is only in the narrow-field focal plane.";return;}
+  const hit=objectInSlit();
+  spec.target=hit?hit.obj:null;
+  spec.frac=hit?hit.frac:0;
+  if(hit&&hit.obj.kind==="galaxy"){
+    spec.template=galTemplate(hit.obj.z,hit.obj.gtype);
+    const where=hit.frac>0.7?"nucleus":"outer regions";
+    document.getElementById("specStatus").textContent=
+      "Integrating on "+hit.obj.name+" ("+hit.obj.cluster+") — slit on the "+where+
+      (hit.frac<=0.7?" · count rate reduced, integration will take longer.":" …");
+  }else if(hit){
+    spec.template=STAR_TPL;
+    document.getElementById("specStatus").textContent=
+      "Integrating — but this point-like object is a foreground Milky Way star, not a cluster galaxy. Its lines will show (almost) no redshift.";
+  }else{
+    spec.template=null;
+    document.getElementById("specStatus").textContent="No object in slit — integrating on blank sky (airglow and noise only).";
+  }
+  if(!spec.running&&spec.secs>0&&spec.lastTargetKey!==targetKey(spec.target)){
+    spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;
+  }
+  spec.lastTargetKey=targetKey(spec.target);
+  spec.running=true;
+  document.getElementById("goBtn").disabled=true;
+  document.getElementById("stopBtn").disabled=false;
+  document.getElementById("saveBtn").disabled=true;
+}
+function specStop(){
+  spec.running=false;
+  document.getElementById("goBtn").disabled=false;
+  document.getElementById("stopBtn").disabled=true;
+  document.getElementById("saveBtn").disabled=spec.total<=0;
+  document.getElementById("specStatus").textContent="Integration paused. Press Go to add more counts, or save.";
+}
+function poisson(mu){
+  if(mu>25)return Math.max(0,Math.round(mu+randn()*Math.sqrt(mu)));
+  let L=Math.exp(-mu),k=0,p=1;
+  do{k++;p*=Math.random();}while(p>L);
+  return k-1;
+}
+function specTick(dt){
+  if(!spec.running)return;
+  spec.secs+=dt;
+  let objBase=0;
+  const hit=objectInSlit();
+  const cur=hit?hit.obj:null;
+  if(spec.template&&cur&&targetKey(cur)===spec.lastTargetKey){
+    const V=cur.m??cur.mag;
+    objBase=objRate(V)*(hit.frac??1)*(APERTURE*APERTURE)/(4*4);
+  }else if(spec.template&&!cur){
+    document.getElementById("specStatus").textContent="Object has drifted out of the slit — only sky photons arriving. Is tracking on?";
+  }
+  for(let i=0;i<NCH;i++){
+    const mu=dt*(SKY_TPL[i]+(spec.template?objBase*spec.template[i]:0));
+    const c=poisson(mu);
+    spec.counts[i]+=c;spec.total+=c;
+  }
+  const perCh=spec.total/NCH;
+  document.getElementById("phCount").textContent=Math.round(spec.total).toLocaleString();
+  document.getElementById("phChan").textContent=perCh.toFixed(1);
+  document.getElementById("intSec").textContent=spec.secs.toFixed(1);
+  const sky=SKY_MEAN*spec.secs,sig=Math.max(0,perCh-sky);
+  document.getElementById("snrOut").textContent=(sig/Math.sqrt(Math.max(perCh,1))).toFixed(1);
+}
+function drawSpec(){
+  const W=sc.width,H=sc.height,pad=34;
+  scx.fillStyle="#04121a";scx.fillRect(0,0,W,H);
+  scx.strokeStyle="#123240";scx.lineWidth=1;
+  scx.strokeRect(pad,8,W-pad-8,H-30);
+  scx.fillStyle="#3f7d8c";scx.font="10px 'IBM Plex Mono'";
+  for(let wl=3800;wl<=7000;wl+=400){
+    const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-8);
+    scx.fillText(wl,x-12,H-8);
+    scx.beginPath();scx.moveTo(x,H-22);scx.lineTo(x,H-26);scx.stroke();
+  }
+  scx.save();scx.translate(10,H/2);scx.rotate(-Math.PI/2);
+  scx.fillText("REL. INTENSITY",-40,0);scx.restore();
+  let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
+  if(mx<=0)return;
+  scx.fillStyle="#6fd3e0";scx.strokeStyle="#6fd3e0";
+  const y0=8,hgt=H-38;
+  if(spec.running){
+    for(let i=0;i<NCH;i++){
+      const x=pad+i/(NCH-1)*(W-pad-8),y=y0+hgt*(1-spec.counts[i]/mx);
+      scx.fillRect(x,y,1.2,1.2);
+    }
+  }else{
+    scx.beginPath();
+    for(let i=0;i<NCH;i++){
+      const x=pad+i/(NCH-1)*(W-pad-8),y=y0+hgt*(1-spec.counts[i]/mx);
+      i?scx.lineTo(x,y):scx.moveTo(x,y);
+    }
+    scx.stroke();
+  }
+}
+function saveSpectrum(){
+  let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
+  const data=new Float64Array(NCH);
+  for(let i=0;i<NCH;i++)data[i]=spec.counts[i]/mx;
+  const t=spec.target;
+  const isGal=t&&t.kind==="galaxy";
+  const label=t?(isGal?t.name+" ("+t.cluster+")":"Foreground star"):"Blank sky";
+  const name=label+" · "+spec.secs.toFixed(0)+"s";
+  const snr=+document.getElementById("snrOut").textContent;
+  savedSpectra.push({name,data,snr,m:isGal?t.m:(t?t.mag:NaN),practice:false});
+  refreshSavedUI();refreshMezSel();
+  document.getElementById("specStatus").textContent="Saved “"+name+"”. Open Measure Redshift to work on it.";
+  spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;spec.template=null;
+  document.getElementById("saveBtn").disabled=true;
+  document.getElementById("phCount").textContent="0";
+  document.getElementById("phChan").textContent="0.0";
+  document.getElementById("intSec").textContent="0.0";
+  document.getElementById("snrOut").textContent="0.0";
+}
+function refreshSavedUI(){
+  const el=document.getElementById("savedList");
+  const mine=savedSpectra.filter(s=>!s.practice);
+  el.innerHTML=mine.length?mine.map(s=>"· "+s.name+" (S/N "+s.snr+")").join("<br>"):"None yet.";
+}
+
+/* ---------------- main loop & clocks ---------------- */
+function frame(now){
+  const dt=Math.min(0.25,(now-st.lastFrame)/1000);st.lastFrame=now;
+  const domeTarget=st.dome==="open"?1:0;
+  if(st.domeAnim!==domeTarget){
+    const dir=Math.sign(domeTarget-st.domeAnim);
+    st.domeAnim=Math.max(0,Math.min(1,st.domeAnim+dir*dt/3.5));
+    document.getElementById("domeLed").classList.toggle("open",st.domeAnim>0.97);
+  }
+  if(!st.tracking&&!st.slew)st.ra+=dt*(1.0027379/3600);
+  if(slewDir&&!st.slew){
+    const rate=+document.getElementById("rateSel").value;
+    const step=dt*rate*(st.view==="finder"?0.02:0.0015);
+    if(slewDir==="N")st.dec+=step;
+    if(slewDir==="S")st.dec-=step;
+    if(slewDir==="E")st.ra+=step/15/Math.cos(st.dec*Math.PI/180);
+    if(slewDir==="W")st.ra-=step/15/Math.cos(st.dec*Math.PI/180);
+    st.dec=Math.max(-89.9,Math.min(89.9,st.dec));
+  }
+  slewTick(dt);
+  specTick(dt);
+  if(!spec.running){
+    document.getElementById("goBtn").disabled=
+      st.view!=="telescope"||st.domeAnim<0.98||!!st.slew;
+  }
+  if(document.getElementById("scr-obs").classList.contains("active")){
+    drawTV();drawSpec();
+    document.getElementById("raOut").textContent=fmtHMS(st.ra,1);
+    document.getElementById("decOut").textContent=fmtDMS(st.dec);
+    const hit=objectInSlit();
+    document.getElementById("targOut").textContent=hit
+      ?(hit.obj.kind==="galaxy"?hit.obj.name:"star V="+hit.obj.mag.toFixed(1)):"—";
+  }
+  requestAnimationFrame(frame);
+}
+setInterval(()=>{
+  const d=new Date();
+  document.getElementById("utClock").textContent=fmtHMS(d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600,0);
+  document.getElementById("lstClock").textContent=fmtHMS(lstHours(d),0);
+  document.getElementById("jdClock").textContent=julianDate(d).toFixed(6);
+},1000);
+
+/* =====================================================================
+   MEASURE REDSHIFT
+   ===================================================================== */
+/* template line lists shown as slidable overlays; markers are drawn at
+   λ_rest × (1+z), so the pattern stretches as it slides — that IS redshift */
+const TEMPLATES={
+  none:{label:"— no template —",marks:[]},
+  ell:{label:"Elliptical (absorption)",marks:[
+    [REST_K,"Ca K"],[REST_H,"Ca H"],[REST_G,"G band"],[4861.3,"Hβ"],[5175.4,"Mg b"],[5892.9,"Na D"]]},
+  sf:{label:"Star-forming (emission)",marks:[
+    [3727.4,"[O II]"],[4861.3,"Hβ"],[4958.9,"[O III]"],[5006.8,"[O III]"],[6562.8,"Hα"]]},
+};
+const mez={cur:null,wl0:WL0,wl1:WL1,cursorWl:null,tpl:"none",z:0.0};
+let cand=null;   // the measurement candidate: {v, z, method}
+const mc=document.getElementById("mezCanvas"),mcx=mc.getContext("2d");
+function refreshMezSel(){
+  const sel=document.getElementById("mezSel");
+  const prev=sel.value;
+  sel.innerHTML="";
+  savedSpectra.forEach((s,i)=>sel.add(new Option((s.practice?"":"★ ")+s.name,i)));
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  loadMez();
+}
+function loadMez(){
+  const sel=document.getElementById("mezSel");
+  mez.cur=savedSpectra[+sel.value]||null;
+  document.getElementById("mezMag").textContent=mez.cur&&isFinite(mez.cur.m)?mez.cur.m.toFixed(2):"--.--";
+  document.getElementById("mezSnr").textContent=mez.cur?mez.cur.snr:"--";
+  clearLines(false);
+  mez.tpl="none";                       // re-classify each new object yourself
+  const tsel=document.getElementById("tplSel");
+  if(tsel.options.length)tsel.value="none";
+  cand=null;updateCand();
+  mzReset();
+}
+function idxOf(wl){return Math.max(0,Math.min(NCH-1,Math.round((wl-WL0)/DWL)));}
+function mzClamp(){
+  const span=Math.max(40,mez.wl1-mez.wl0);
+  mez.wl0=Math.max(WL0,Math.min(mez.wl0,WL1-span));
+  mez.wl1=Math.min(WL1,mez.wl0+span);
+}
+function mzZoom(f){const c=(mez.wl0+mez.wl1)/2,w=(mez.wl1-mez.wl0)*f;mez.wl0=c-w/2;mez.wl1=c+w/2;mzClamp();drawMez();}
+function mzPan(s){const w=mez.wl1-mez.wl0;mez.wl0+=s*w*0.25;mez.wl1+=s*w*0.25;mzClamp();drawMez();}
+function mzReset(){mez.wl0=WL0;mez.wl1=WL1;drawMez();}
+/* staggered marker label placement so nearby labels don't collide */
+function drawMez(){
+  const W=mc.width,H=mc.height,padL=44,padB=30,padT=12,padR=12;
+  mcx.fillStyle="#0d1420";mcx.fillRect(0,0,W,H);
+  mcx.strokeStyle="#1e2a3c";mcx.lineWidth=1;
+  mcx.strokeRect(padL,padT,W-padL-padR,H-padT-padB);
+  const x2px=wl=>padL+(wl-mez.wl0)/(mez.wl1-mez.wl0)*(W-padL-padR);
+  const span=mez.wl1-mez.wl0;
+  const step=span>2400?400:span>1200?200:span>500?100:span>200?50:span>80?20:10;
+  mcx.fillStyle="#3f7d8c";mcx.font="11px 'IBM Plex Mono'";
+  for(let wl=Math.ceil(mez.wl0/step)*step;wl<=mez.wl1;wl+=step){
+    const x=x2px(wl);
+    mcx.fillText(wl,x-16,H-10);
+    mcx.beginPath();mcx.moveTo(x,H-padB);mcx.lineTo(x,H-padB+4);mcx.stroke();
+  }
+  mcx.fillText("WAVELENGTH (Å)",W/2-44,H-1);
+  mcx.save();mcx.translate(12,H/2);mcx.rotate(-Math.PI/2);
+  mcx.fillText("REL. INTENSITY",-44,0);mcx.restore();
+  if(!mez.cur){
+    mcx.fillStyle="#54637c";mcx.font="600 18px 'Rajdhani'";mcx.textAlign="center";
+    mcx.fillText("NO SPECTRUM — observe a galaxy at the telescope first",W/2,H/2);
+    mcx.textAlign="left";return;
+  }
+  /* zero-redshift reference markers (rest K/H/G and the airglow line) */
+  if(document.getElementById("restChk").checked){
+    const refs=[[REST_K,"K rest"],[REST_H,"H rest"],[REST_G,"G rest"],[5577.3,"[O I] sky"]];
+    let vis=0;
+    for(const[wl,lab]of refs){
+      if(wl<mez.wl0||wl>mez.wl1)continue;
+      const x=x2px(wl);
+      mcx.strokeStyle="rgba(125,138,160,.4)";mcx.setLineDash([4,4]);
+      mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();mcx.setLineDash([]);
+      mcx.fillStyle="#7d8aa0";mcx.font="12px 'IBM Plex Mono'";
+      mcx.fillText(lab,x+3,padT+14+(vis%3)*15);
+      vis++;
+    }
+  }
+  /* the spectrum */
+  const d=mez.cur.data;
+  const i0=idxOf(mez.wl0),i1=idxOf(mez.wl1);
+  let mx=0,mn=1e9;for(let i=i0;i<=i1;i++){mx=Math.max(mx,d[i]);mn=Math.min(mn,d[i]);}
+  const pad=(mx-mn)*0.08||0.05;mx+=pad;mn=Math.max(0,mn-pad);
+  const y2px=v=>padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));
+  mcx.strokeStyle="#6fd3e0";mcx.lineWidth=1.2;mcx.beginPath();
+  for(let i=i0;i<=i1;i++){
+    const x=x2px(WL0+i*DWL),y=y2px(d[i]);
+    i===i0?mcx.moveTo(x,y):mcx.lineTo(x,y);
+  }
+  mcx.stroke();
+  /* slidable template markers at λ_rest × (1+z) */
+  const tpl=TEMPLATES[mez.tpl];
+  if(tpl.marks.length){
+    let vis=0;
+    for(const[l0,lab]of tpl.marks){
+      const wl=l0*(1+mez.z);
+      if(wl<mez.wl0||wl>mez.wl1)continue;
+      const x=x2px(wl);
+      mcx.strokeStyle="rgba(228,87,61,.85)";mcx.lineWidth=1.2;
+      mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
+      mcx.fillStyle="#e4573d";mcx.font="12px 'IBM Plex Mono'";
+      mcx.fillText(lab,x+3,H-padB-8-(vis%3)*15);
+      vis++;
+    }
+  }
+  /* recorded K/H click measurements */
+  for(const[id,color,lab]of[["wlK","#ffb454","λK"],["wlH","#7ee29a","λH"]]){
+    const v=parseFloat(document.getElementById(id).value);
+    if(isFinite(v)&&v>=mez.wl0&&v<=mez.wl1){
+      const x=x2px(v);
+      mcx.strokeStyle=color;mcx.lineWidth=1;
+      mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
+      mcx.fillStyle=color;mcx.font="12px 'IBM Plex Mono'";
+      mcx.fillText(lab+" "+v.toFixed(1),x+3,padT+14+(lab==="λH"?15:0));
+    }
+  }
+  /* live cursor */
+  if(mez.cursorWl!=null&&mez.cursorWl>=mez.wl0&&mez.cursorWl<=mez.wl1){
+    const x=x2px(mez.cursorWl);
+    mcx.strokeStyle="rgba(111,211,224,.9)";mcx.lineWidth=1;
+    mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
+  }
+}
+/* crosshair drag */
+function mezPointer(e){
+  const r=mc.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(mc.width/r.width);
+  const padL=44,padR=12;
+  const f=(x-padL)/(mc.width-padL-padR);
+  if(f<0||f>1){return;}
+  mez.cursorWl=mez.wl0+f*(mez.wl1-mez.wl0);
+  document.getElementById("mezCurWl").textContent=mez.cursorWl.toFixed(1);
+  drawMez();
+}
+mc.addEventListener("pointerdown",e=>{mc.setPointerCapture(e.pointerId);mezPointer(e);
+  mc.addEventListener("pointermove",mezPointer);});
+mc.addEventListener("pointerup",()=>mc.removeEventListener("pointermove",mezPointer));
+
+/* ---- measurement tool toggle: template fit vs line measurement ---- */
+function setMezTool(which){
+  document.getElementById("tplTool").style.display=which==="tpl"?"":"none";
+  document.getElementById("lineTool").style.display=which==="line"?"":"none";
+  document.getElementById("toolTplBtn").classList.toggle("on",which==="tpl");
+  document.getElementById("toolLineBtn").classList.toggle("on",which==="line");
+}
+
+/* ---- template fitting ---- */
+function setTemplate(){
+  mez.tpl=document.getElementById("tplSel").value;
+  drawMez();
+}
+function zSet(v){
+  mez.z=Math.max(0,Math.min(0.25,v));
+  document.getElementById("zSlider").value=mez.z;
+  document.getElementById("zBox").value=mez.z.toFixed(4);
+  document.getElementById("czOut").textContent=Math.round(mez.z*C_KMS).toLocaleString();
+  drawMez();
+}
+function zFromSlider(){zSet(parseFloat(document.getElementById("zSlider").value));}
+function zFromBox(){zSet(parseFloat(document.getElementById("zBox").value)||0);}
+function zNudge(d){zSet(mez.z+d);}
+function adoptTemplate(){
+  if(mez.tpl==="none")return;
+  cand={v:mez.z*C_KMS,z:mez.z,method:"template",
+    gtype:mez.tpl==="sf"?"star-forming":"elliptical"};
+  updateCand();
+}
+
+/* ---- click-measured K/H lines ---- */
+function setLine(which){
+  if(mez.cursorWl==null)return;
+  document.getElementById(which==="K"?"wlK":"wlH").value=mez.cursorWl.toFixed(1);
+  calcMez();
+}
+function clearLines(redraw=true){
+  document.getElementById("wlK").value="";
+  document.getElementById("wlH").value="";
+  calcMez(false);if(redraw)drawMez();
+}
+function calcMez(makeCand=true){
+  const lk=parseFloat(document.getElementById("wlK").value);
+  const lh=parseFloat(document.getElementById("wlH").value);
+  const dK=isFinite(lk)?lk-REST_K:null;
+  const dH=isFinite(lh)?lh-REST_H:null;
+  const vK=dK!=null?C_KMS*dK/REST_K:null;
+  const vH=dH!=null?C_KMS*dH/REST_H:null;
+  const vs=[vK,vH].filter(v=>v!=null);
+  const vA=vs.length?vs.reduce((a,b)=>a+b)/vs.length:null;
+  document.getElementById("dlK").textContent=dK!=null?dK.toFixed(1):"--";
+  document.getElementById("dlH").textContent=dH!=null?dH.toFixed(1):"--";
+  document.getElementById("vK").textContent=vK!=null?Math.round(vK).toLocaleString():"--";
+  document.getElementById("vH").textContent=vH!=null?Math.round(vH).toLocaleString():"--";
+  if(makeCand){
+    cand=vA!=null?{v:vA,z:vA/C_KMS,method:"K/H lines",gtype:null}:null;
+    updateCand();
+  }
+  drawMez();
+}
+function distMpc(){
+  return(mez.cur&&isFinite(mez.cur.m))?Math.pow(10,(mez.cur.m-M_ABS+5)/5)/1e6:null;
+}
+function updateCand(){
+  const D=distMpc();
+  document.getElementById("candV").textContent=cand?Math.round(cand.v).toLocaleString():"--";
+  document.getElementById("candZ").textContent=cand?cand.z.toFixed(4):"--";
+  document.getElementById("candMethod").textContent=cand?cand.method:"—";
+  document.getElementById("dMpc").textContent=D!=null?D.toFixed(1):"--";
+  document.getElementById("recBtn").disabled=!(cand&&D!=null);
+}
+
+/* ---------------- data table ---------------- */
+const rows=[];
+function recordRow(){
+  const D=distMpc();
+  if(!cand||D==null)return;
+  rows.push({name:mez.cur.name.replace(/ · \d+s$/,""),m:mez.cur.m,
+    method:cand.method,gtype:cand.gtype,z:cand.z,v:cand.v,D});
+  refreshTable();drawHub();
+}
+function delRow(i){rows.splice(i,1);refreshTable();drawHub();}
+function refreshTable(){
+  const tb=document.querySelector("#dataTable tbody");
+  tb.innerHTML=rows.map((r,i)=>
+    "<tr><td>"+r.name+"</td><td>"+r.m.toFixed(2)+"</td><td>"+r.method+
+    "</td><td>"+(r.gtype||"—")+"</td><td>"+r.z.toFixed(4)+"</td><td>"+Math.round(r.v).toLocaleString()+
+    "</td><td>"+r.D.toFixed(1)+'</td><td><button class="mini" onclick="delRow('+i+')" aria-label="Delete row">✕</button></td></tr>').join("");
+}
+function exportCSV(){
+  let csv="galaxy,apparent_mag,method,type,redshift_z,velocity_km_s,distance_Mpc\n";
+  for(const r of rows)csv+='"'+r.name+'",'+r.m.toFixed(2)+","+r.method+","+(r.gtype||"")+","+r.z.toFixed(5)+","+
+    r.v.toFixed(0)+","+r.D.toFixed(2)+"\n";
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="hubble_law_data.csv";a.click();URL.revokeObjectURL(a.href);
+}
+
+/* =====================================================================
+   HUBBLE DIAGRAM
+   ===================================================================== */
+const hc=document.getElementById("hubCanvas"),hcx=hc.getContext("2d");
+function hFromSlider(){document.getElementById("hBox").value=document.getElementById("hSlider").value;drawHub();}
+function hFromBox(){document.getElementById("hSlider").value=document.getElementById("hBox").value;drawHub();}
+function drawHub(){
+  const W=hc.width,H=hc.height,padL=64,padB=44,padT=16,padR=16;
+  hcx.fillStyle="#0d1420";hcx.fillRect(0,0,W,H);
+  hcx.strokeStyle="#1e2a3c";hcx.strokeRect(padL,padT,W-padL-padR,H-padT-padB);
+  const Dmax=Math.max(1000,...rows.map(r=>r.D*1.15));
+  const Vmax=Math.max(70000,...rows.map(r=>r.v*1.15));
+  const x2=D=>padL+D/Dmax*(W-padL-padR);
+  const y2=v=>H-padB-(v/Vmax)*(H-padT-padB);
+  hcx.fillStyle="#3f7d8c";hcx.font="10px 'IBM Plex Mono'";
+  const dStep=Dmax>800?200:100,vStep=Vmax>50000?10000:5000;
+  hcx.strokeStyle="#152030";
+  for(let D=dStep;D<=Dmax;D+=dStep){const x=x2(D);
+    hcx.beginPath();hcx.moveTo(x,padT);hcx.lineTo(x,H-padB);hcx.stroke();
+    hcx.fillText(D,x-10,H-padB+14);}
+  for(let v=vStep;v<=Vmax;v+=vStep){const y=y2(v);
+    hcx.beginPath();hcx.moveTo(padL,y);hcx.lineTo(W-padR,y);hcx.stroke();
+    hcx.fillText((v/1000)+"k",padL-30,y+3);}
+  hcx.fillText("DISTANCE (Mpc)",W/2-44,H-8);
+  hcx.save();hcx.translate(14,H/2+50);hcx.rotate(-Math.PI/2);
+  hcx.fillText("VELOCITY (km/s)",0,0);hcx.restore();
+  const H0=parseFloat(document.getElementById("hBox").value)||55;
+  hcx.strokeStyle="#ffb454";hcx.lineWidth=1.6;
+  hcx.beginPath();hcx.moveTo(x2(0),y2(0));
+  const Dend=Math.min(Dmax,Vmax/H0);
+  hcx.lineTo(x2(Dend),y2(Dend*H0));hcx.stroke();
+  hcx.fillStyle="#ffb454";hcx.font="12px 'IBM Plex Mono'";
+  hcx.fillText("v = "+H0.toFixed(1)+" · D",x2(Dend*0.75)+6,y2(Dend*0.75*H0)-8);
+  hcx.fillStyle="#6fd3e0";
+  for(const r of rows){
+    const x=x2(r.D),y=y2(r.v);
+    hcx.beginPath();hcx.arc(x,y,4,0,7);hcx.fill();
+    hcx.strokeStyle="#0d1420";hcx.lineWidth=1;hcx.stroke();
+  }
+  if(!rows.length){
+    hcx.fillStyle="#54637c";hcx.font="600 18px 'Rajdhani'";hcx.textAlign="center";
+    hcx.fillText("NO DATA YET — record galaxies in the Measure Redshift tab",W/2,H/2);
+    hcx.textAlign="left";
+  }
+  if(rows.length){
+    const rms=Math.sqrt(rows.reduce((a,r)=>a+Math.pow(r.v-H0*r.D,2),0)/rows.length);
+    document.getElementById("rmsOut").textContent=Math.round(rms).toLocaleString()+" km/s";
+  }else document.getElementById("rmsOut").textContent="--";
+  document.getElementById("ageOut").textContent=(977.8/H0).toFixed(1)+" Gyr";
+}
+
+/* ---------------- navigation & init ---------------- */
+function showScreen(id){
+  for(const s of["obs","mez","hub"]){
+    document.getElementById("scr-"+s).classList.toggle("active",s===id);
+    document.getElementById("tab"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===id);
+  }
+  if(id==="mez")drawMez();
+  if(id==="hub")drawHub();
+}
+(function init(){
+  buildFieldUI();
+  const tsel=document.getElementById("tplSel");
+  for(const k in TEMPLATES)tsel.add(new Option(TEMPLATES[k].label,k));
+  refreshMezSel();
+  zSet(0);
+  drawMez();drawHub();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
