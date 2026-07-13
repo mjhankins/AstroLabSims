@@ -15,7 +15,8 @@ online or from a local copy of this repository.
 |---|---|---|---|
 | [Classification of Stellar Spectra](spectral-classification/) | ✅ Available | Intro–advanced | ~1–2 hours |
 | [Hubble's Law](hubble-law/) | ✅ Available | Intro–advanced | ~1–2 hours |
-| Photometry of Star Clusters | 🚧 In development | — | — |
+| [Cluster Photometry & HR Diagrams](cluster-photometry/) | ✅ Available | Intro–advanced | ~1.5–2.5 hours |
+| Exoplanet Transits | 🚧 In development | — | — |
 | More to come | 🗓 Planned | — | — |
 
 ## Repository layout
@@ -27,8 +28,11 @@ spectral-classification/
   jacoby_atlas.js               Real spectral standards (see "Data" below)
 hubble-law/
   index.html                    The complete activity (single self-contained file)
+cluster-photometry/
+  index.html                    The complete activity (single self-contained file)
 tools/
   get_jacoby_atlas.py           Regenerates jacoby_atlas.js from the STScI archive
+  export_mist_grid.py         Builds isochrone_grid.js for the planned MIST upgrade
 README.md
 LICENSE
 ```
@@ -69,6 +73,33 @@ automatically from the full file, so `--all-dwarfs` is the recommended default.)
 If `jacoby_atlas.js` is absent, the activity falls back to self-consistent
 synthetic standards and says so in the interface.
 
+## The cluster-photometry activity
+
+Students image open star clusters with a simulated CCD camera (Johnson–Cousins
+UBVRI), extract aperture photometry from their own frames star by star, and fit
+the resulting HR diagram with ZAMS and isochrone sliders for distance, reddening,
+and age. An advanced two-color diagram (U−B vs B−V) measures reddening
+independently of distance. Four observable cluster programs (the Pleiades,
+Praesepe, M67, h Persei) span m−M ≈ 5.7–13.5 and ages 14 Myr–4 Gyr; two
+analysis-only example catalogs (NGC 752, IC 4665) let students practice the
+fitting tools without shortcutting the assigned clusters.
+
+**Instructor knobs.** Students must record at least 25 stars in both B and V
+before their data can be sent to the HR-diagram page; append `?nreq=N` to the
+activity URL to change the threshold. Written handouts should supply E(B−V) for
+classes not doing the two-color (advanced) track. Instructor answer keys are
+deliberately **not** committed to this repository — contact the maintainer.
+
+**Models.** The isochrones and ZAMS in this release are a documented parametric
+family (Allen-style ZAMS, Johnson two-color locus, turnoff ages anchored to
+published cluster parameters); the synthetic clusters are generated from the same
+family, so student fits recover literature-like values by construction. The
+in-app "Further Information" page discloses exactly what is and isn't physical.
+An upgrade to real MIST v1.2 isochrones (Choi et al. 2016; Dotter 2016) is
+planned: run `cluster-photometry/models/export_mist_grid.py` locally (it uses
+the `isochrones` package, Morton 2015, which downloads the MIST grids on first
+use) and it emits a compact `isochrone_grid.js` ready for integration.
+
 ## Technical fidelity notes
 
 For instructors who want to know what is and isn't physical:
@@ -79,6 +110,14 @@ For instructors who want to know what is and isn't physical:
 - **Photon counting.** The spectrometer accumulates genuine Poisson-distributed
   counts per channel; S/N grows as √t and count rates scale with stellar V
   magnitude. Noisy student spectra are noisy for the right reasons.
+- **CCD imaging (cluster photometry).** Poisson noise is frozen into each frame at
+  readout, like real data; bright stars saturate in long exposures and must be
+  retaken short; miscentered apertures lose flux and close pairs blend; sky
+  apertures containing a faint star are silently contaminated; images taken with
+  tracking off are trailed and unusable; a cursor readout reports counts in the
+  1.5″ detector pixel under the mouse. Long exposures play accelerated (~5 s of
+  wall time each) and horizon/airmass limits are not enforced — both deliberate
+  concessions to class time, noted in-app.
 - **Pointing model.** Hot-list slews land 0–0.9′ from the target with a random,
   per-target error that is *repeatable* within a session, as a real telescope
   pointing model would be. Students center targets themselves.
