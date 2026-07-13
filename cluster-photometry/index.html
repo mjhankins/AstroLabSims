@@ -290,7 +290,7 @@
         </div>
         <button class="ctrl" id="sendBtn" onclick="sendToHR()" disabled>Send to HR Diagram ▸</button>
       </div>
-      <div id="obsDataWrap" style="max-height:220px;overflow-y:auto;margin-top:8px">
+      <div id="obsDataWrap" style="max-height:700px;overflow-y:auto;margin-top:8px">
         <table class="dataTable" id="obsDataTable">
           <thead><tr><th>Star</th><th>U</th><th>B</th><th>V</th><th>R</th><th>I</th><th>B−V</th><th>S/N(V)</th></tr></thead>
           <tbody></tbody>
@@ -404,15 +404,6 @@
        must be measured at the telescope; no stored shortcut exists for them. 5. Convert your distance modulus to a distance:
        log D = (V−M<sub>V</sub>)/5 + 1, ideally after correcting for extinction A<sub>V</sub> = 3.1·E(B−V).</p>
 
-    <h2>Why a camera and not a photometer</h2>
-    <p>Project CLEA's original exercise simulated a photoelectric photometer — the workhorse instrument of its era,
-       measuring one star at a time through a physical aperture. Modern observatories instead image whole fields with
-       CCD/CMOS detectors and extract many stars from each frame in software. This activity follows the modern
-       workflow: telescope control (acquisition on the finder) is deliberately separated from the instrument
-       (photometry on captured images), the way a real observing run separates them. Once an image is taken, the
-       telescope can move on — your data are in the frame. Images are displayed in grayscale, as astronomical
-       detector data really are; the finder TV keeps its color view.</p>
-
     <h2>What is and isn't physical</h2>
     <p><b>Photon counting</b> is genuinely Poisson and is frozen into each image at capture, like real data: S/N grows
        as √(exposure time), rates scale with stellar magnitude, and sky background is measured from the frame and
@@ -423,7 +414,8 @@
        are trailed and useless for photometry. The cursor readout reports counts in the detector pixel (1.5″ pixels)
        under the mouse — the count peak marks a star's center, which is how astronomers really centroid. Long
        exposures play accelerated (~5 s of wall time each) as a concession to class time, and horizon/airmass limits
-       are deliberately not enforced so any cluster can be observed at any hour. <b>Time</b> uses real UT/JD/LST for
+       are deliberately not enforced so any cluster can be observed at any hour. Detector images are displayed in grayscale, as astronomical
+       data really are; the finder TV keeps its color view. <b>Time</b> uses real UT/JD/LST for
        a Kitt Peak–like site. <b>Cluster stars</b> are synthetic: members are generated from the same isochrone
        family used by the fitting tool, at published values of distance modulus, reddening, and age, with a realistic
        mass distribution, an unresolved-binary sequence, and a few non-member contaminants. Fits therefore recover
@@ -441,12 +433,18 @@
        2016; Dotter 2016) is planned; the export tooling for it already exists in the repository.</p>
 
     <h2>Credit &amp; lineage</h2>
-    <p>This activity follows a path opened by <b>Project CLEA</b> (Contemporary Laboratory Experiences in Astronomy,
-       Gettysburg College) and <b>VIREO — The Virtual Educational Observatory</b> by Glenn Snyder and Laurence
-       Marschall: specifically the exercises <i>Photoelectric Photometry of the Pleiades</i> and <i>HR Diagrams of
-       Star Clusters</i>, whose pedagogy this software follows — and deliberately updates — as an independent homage.
-       It was not produced by, and is not affiliated with or endorsed by, Project CLEA, its authors, or Gettysburg
-       College, and contains none of their code or data.</p>
+    <p>The aim of this project is to give students a realistic experience of controlling a telescope and
+       analyzing their own data, grounded in the working practices of professional astronomy. The workflow
+       here — imaging a cluster field, extracting aperture photometry, and fitting the color–magnitude
+       diagram for distance, reddening, and age — is standard astronomical practice, used essentially
+       unchanged at observatories everywhere.</p>
+    <p>In bringing that practice into the classroom we gratefully acknowledge <b>Project CLEA</b>
+       (Contemporary Laboratory Experiences in Astronomy, Gettysburg College) and <b>VIREO — The Virtual
+       Educational Observatory</b> by Glenn Snyder and Laurence Marschall, whose exercises
+       <i>Photoelectric Photometry of the Pleiades</i> and <i>HR Diagrams of Star Clusters</i> demonstrated
+       decades ago how effective simulated observing can be, and which we consulted while designing this
+       activity. This software was not produced by, and is not affiliated with or endorsed by, Project CLEA,
+       its authors, or Gettysburg College, and contains none of their code or data.</p>
 
     <p>Pedagogical design, feature direction, and classroom testing: <b>Matthew Hankins, Arkansas Tech University</b>.
        Software written collaboratively with <b>Claude</b> (Anthropic), under the instructor's direction.
@@ -455,7 +453,7 @@
 </section>
 
 <footer>
-  Open Educational Observatory — Cluster Photometry &amp; HR Diagrams (demo build). An homage to Project CLEA / VIREO. MIT licensed.
+  Open Educational Observatory — Cluster Photometry &amp; HR Diagrams. MIT licensed.
 </footer>
 
 <script>
@@ -666,8 +664,9 @@ const PIX_ARCSEC=1.5, PSF_SIG=1.5;                    // detector pixel scale & 
 const CAM_FOV=15/60;                                  // 15 arcmin (width) in degrees
 const FINDER_FOV=2.5;
 const st={
-  domeOpen:false, tracking:false,
-  raDeg:CLUSTERS[0].raH*15, decDeg:CLUSTERS[0].decDeg,
+  dome:"closed", domeAnim:0,     // 0 = fully closed, 1 = fully open
+  tracking:false,
+  raDeg:0, decDeg:31.96,          // placeholder — parked at zenith in init()
   slew:null, moveDir:null,
   cluster:CLUSTERS[0],
   filter:"B", reading:"sky",
@@ -736,40 +735,72 @@ const cam=document.getElementById("camCanvas"), cx2=cam.getContext("2d");
 function drawTV(){
   const W=tv.width,H=tv.height;
   tvx.fillStyle="#000";tvx.fillRect(0,0,W,H);
-  if(!st.domeOpen){
-    tvx.fillStyle="#12161e";tvx.fillRect(0,0,W,H);
-    tvx.fillStyle="#3a4456";tvx.font="16px 'IBM Plex Mono'";
-    tvx.textAlign="center";tvx.fillText("DOME CLOSED",W/2,H/2);
-    return;
+  const domeOpen=st.domeAnim;
+  const transit=st.slew&&st.slew.phase==="transit";
+
+  if(domeOpen>0.02&&!transit){
+    const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+    const pxPerDeg=H/FINDER_FOV;
+    const stars=starsNear(st.raDeg,st.decDeg,FINDER_FOV*1.3);
+    for(const s of stars){
+      if(s.V>12.4)continue;
+      let dra=((s.raDeg-st.raDeg+540)%360)-180;
+      const x=W/2 - dra*cosd*pxPerDeg;
+      const y=H/2 - (s.decDeg-st.decDeg)*pxPerDeg;
+      if(x<-8||x>W+8||y<-8||y>H+8)continue;
+      const sz=Math.max(0.7,(12.4-s.V)*0.36);
+      tvx.beginPath();
+      tvx.fillStyle=starColor(s.BV);
+      tvx.shadowColor=tvx.fillStyle;tvx.shadowBlur=sz*2.4;
+      tvx.arc(x,y,sz,0,2*Math.PI);tvx.fill();
+      tvx.shadowBlur=0;
+    }
+    // CCD footprint (detector is 15′ × 12.5′)
+    const sw=CAM_FOV*pxPerDeg, sh=CAM_FOV*(cam.height/cam.width)*pxPerDeg;
+    tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1.4;
+    tvx.strokeRect(W/2-sw/2,H/2-sh/2,sw,sh);
   }
-  if(st.slew&&st.slew.phase==="transit"){ // camera blanked during fast motion
-    tvx.fillStyle="#0e1118";tvx.fillRect(0,0,W,H);
-    const dots=".".repeat(1+Math.floor((performance.now()/400)%3));
-    tvx.fillStyle="#7d8aa0";tvx.font="15px 'IBM Plex Mono'";tvx.textAlign="center";
+
+  if(transit){
+    tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
+    tvx.strokeStyle="rgba(111,211,224,.08)";
+    for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
     tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
-    tvx.fillStyle="#3a4456";tvx.font="12px 'IBM Plex Mono'";
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
     tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
-    return;
+    tvx.textAlign="left";
   }
-  const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
-  const pxPerDeg=H/FINDER_FOV;
-  const stars=starsNear(st.raDeg,st.decDeg,FINDER_FOV*1.3);
-  for(const s of stars){
-    if(s.V>12.4)continue;
-    let dra=((s.raDeg-st.raDeg+540)%360)-180;
-    const x=W/2 - dra*cosd*pxPerDeg;
-    const y=H/2 - (s.decDeg-st.decDeg)*pxPerDeg;
-    if(x<-8||x>W+8||y<-8||y>H+8)continue;
-    const sz=Math.max(0.7,(12.4-s.V)*0.36);
-    tvx.beginPath();
-    tvx.fillStyle=starColor(s.BV);
-    tvx.shadowColor=tvx.fillStyle;tvx.shadowBlur=sz*2.4;
-    tvx.arc(x,y,sz,0,2*Math.PI);tvx.fill();
-    tvx.shadowBlur=0;
+
+  /* dome shutters slide apart from the center */
+  if(domeOpen<0.995){
+    const gap=(W/2)*domeOpen;
+    tvx.fillStyle="#11151d";
+    tvx.fillRect(0,0,W/2-gap,H); tvx.fillRect(W/2+gap,0,W/2-gap,H);
+    tvx.strokeStyle="#232d3e";tvx.lineWidth=2;
+    tvx.beginPath();tvx.moveTo(W/2-gap,0);tvx.lineTo(W/2-gap,H);
+    tvx.moveTo(W/2+gap,0);tvx.lineTo(W/2+gap,H);tvx.stroke();
+    // rivet texture
+    tvx.fillStyle="#1b2330";
+    for(let y=20;y<H;y+=48){
+      if(W/2-gap>24)tvx.fillRect(18,y,4,4);
+      if(W/2-gap>24)tvx.fillRect(W/2-gap-24,y,4,4);
+      if(W/2+gap<W-24)tvx.fillRect(W/2+gap+20,y,4,4);
+      tvx.fillRect(W-24,y,4,4);
+    }
+    if(domeOpen<0.03){
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.fillText("DOME CLOSED",W/2,H/2);
+      tvx.font="12px 'IBM Plex Mono'";
+      tvx.fillText("open the dome to see the sky",W/2,H/2+22);
+      tvx.textAlign="left";
+    }
   }
-  const sw=CAM_FOV*pxPerDeg, sh=CAM_FOV*(cam.height/cam.width)*pxPerDeg;
-  tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1.4;
-  tvx.strokeRect(W/2-sw/2,H/2-sh/2,sw,sh);
+
+  const vg=tvx.createRadialGradient(W/2,H/2,H*0.35,W/2,H/2,H*0.75);
+  vg.addColorStop(0,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,0.5)");
+  tvx.fillStyle=vg;tvx.fillRect(0,0,W,H);
 }
 function nearestClusterLabel(){
   let best=null,bd=1e9;
@@ -786,7 +817,7 @@ function nearestClusterLabel(){
    6. Telescope controls & slewing (three-phase, as in activity 1)
    ============================================================ */
 function setEnabled(){
-  const open=st.domeOpen, locked=!!st.slew;
+  const open=st.dome==="open"&&st.domeAnim>0.97, locked=!!st.slew;
   document.getElementById("goBtn").disabled=!open||st.capturing||locked;
   document.getElementById("prevBtn").disabled=!open||st.capturing||locked;
   document.getElementById("coordBtn").disabled=!open||locked;
@@ -794,10 +825,8 @@ function setEnabled(){
   document.querySelectorAll(".nsew button[data-dir]").forEach(b=>b.disabled=!open||locked);
 }
 function toggleDome(){
-  st.domeOpen=!st.domeOpen;
-  document.getElementById("domeBtn").textContent=st.domeOpen?"CLOSE DOME":"OPEN DOME";
-  document.getElementById("domeLed").classList.toggle("open",st.domeOpen);
-  setEnabled();
+  st.dome=st.dome==="open"?"closed":"open";
+  document.getElementById("domeBtn").textContent=st.dome==="open"?"CLOSE DOME":"OPEN DOME";
 }
 function toggleTracking(){
   st.tracking=!st.tracking;
@@ -886,7 +915,7 @@ function slewTick(dt){
   }
 }
 function moveTick(dt){
-  if(!st.moveDir||st.slew||!st.domeOpen)return;
+  if(!st.moveDir||st.slew||st.dome!=="open")return;
   const rate=(+document.getElementById("rateSel").value)*0.012;
   const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
   if(st.moveDir==="N")st.decDeg=Math.min(89,st.decDeg+rate*dt);
@@ -918,7 +947,7 @@ function magOf(s,f){
   return s.V-s.VI; // I
 }
 function takePreview(){
-  if(!st.domeOpen||st.capturing||st.slew)return;
+  if(st.domeAnim<0.98||st.capturing||st.slew)return;
   st.preview={ra:st.raDeg,dec:st.decDeg,stars:frameStars(st.raDeg,st.decDeg),
     trailed:!st.tracking};
   st.camMode="preview";st.ap=null;st.lastResult=null;
@@ -926,7 +955,7 @@ function takePreview(){
   status("camStatus","Preview read out (not photometric). Frame the field, then Start integration through a filter.");
 }
 function camGo(){
-  if(st.capturing||!st.domeOpen||st.slew)return;
+  if(st.capturing||st.domeAnim<0.98||st.slew)return;
   st.capturing=true;st.capT=0;st.capDone=0;
   setEnabled();
   status("camStatus","Integrating: "+document.getElementById("expN").value+" × "+document.getElementById("expSec").value+" s through "+st.filter+"…");
@@ -985,9 +1014,9 @@ function drawCam(){
   const W=cam.width,H=cam.height;
   cx2.fillStyle="#05070b";cx2.fillRect(0,0,W,H);
   const tag=document.getElementById("camTag");
-  if(!st.domeOpen){
+  if(st.domeAnim<0.98){
     cx2.fillStyle="#3a4456";cx2.font="15px 'IBM Plex Mono'";cx2.textAlign="center";
-    cx2.fillText("DOME CLOSED",W/2,H/2);
+    cx2.fillText(st.dome==="open"?"DOME OPENING…":"DOME CLOSED",W/2,H/2);
     tag.innerHTML="<b>CAMERA</b> · 15′ × 12.5′";
     return;
   }
@@ -1515,8 +1544,15 @@ function frame(now){
     String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0")+":"+String(d.getUTCSeconds()).padStart(2,"0");
   document.getElementById("lstClock").textContent=fmtHMS(lstHours(d),0);
   document.getElementById("jdClock").textContent=julianDate(d).toFixed(4);
-  if(st.domeOpen&&!st.tracking&&!st.slew)
+  if(st.dome==="open"&&!st.tracking&&!st.slew)
     st.raDeg=(st.raDeg+(360/86164.09)*dt+360)%360;
+  const domeTarget=st.dome==="open"?1:0;
+  if(st.domeAnim!==domeTarget){
+    const dir=Math.sign(domeTarget-st.domeAnim);
+    st.domeAnim=Math.max(0,Math.min(1,st.domeAnim+dir*dt/3.5));  // ~3.5 s to open, as in activity 1
+    document.getElementById("domeLed").classList.toggle("open",st.domeAnim>0.97);
+    setEnabled();
+  }
   slewTick(dt);moveTick(dt);capTick(dt);
   document.getElementById("raOut").textContent=fmtHMS(st.raDeg/15,1);
   document.getElementById("decOut").textContent=fmtDMS(st.decDeg);
@@ -1546,6 +1582,11 @@ function showScreen(id){
     b.addEventListener("keyup",up);
   });
   document.querySelectorAll("[data-fine]").forEach(bindFine);
+  // park the telescope at zenith (RA = current LST, Dec = site latitude):
+  // students must use the cluster program list to slew to their target
+  st.raDeg=(lstHours(new Date())*15+360)%360;
+  st.decDeg=31.96;
+  status("telStatus","Telescope parked at zenith. Choose a cluster program and slew to your target.");
   loadCluster();
   setEnabled();
   hrRedraw();
