@@ -95,6 +95,10 @@
   #resultsTable th{color:var(--text-dim);font-weight:500;letter-spacing:.05em;position:sticky;top:0;background:var(--panel-2)}
     padding:10px 14px;margin:10px 0;border-radius:0 3px 3px 0}
   footer{padding:18px 22px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--line);max-width:1180px;margin:0 auto;line-height:1.6}
+  .info-body{max-width:820px;line-height:1.65;padding-bottom:20px}
+  .info-body h2{font-family:var(--disp);letter-spacing:.1em;color:var(--amber);margin:22px 0 8px;font-size:18px}
+  .info-body p{margin-bottom:10px}
+  .info-body b{color:#fff}
   .hint{color:var(--text-dim);font-size:12px;line-height:1.55;margin-top:6px}
   .statusline{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:8px;min-height:16px}
   @media (max-width:920px){
@@ -113,7 +117,8 @@
   <nav>
     <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
     <button id="tabCls" onclick="showScreen('cls')">Classify Spectra</button>
-    <a class="navlink" href="../">Homepage</a>
+    <button id="tabInfo" onclick="showScreen('info')">Information</button>
+    <a class="navlink" id="homeLink" href="../">Homepage</a>
   </nav>
 </header>
 
@@ -195,7 +200,7 @@
       </div>
 
       <div class="panel">
-        <h3>Hot List · Program Stars</h3>
+        <h3>Target List · Program Stars</h3>
         <select id="hotSel" style="width:100%" aria-label="Hot list"></select>
         <div class="row" style="margin-top:8px">
           <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to object</button>
@@ -266,6 +271,10 @@
           <button class="ctrl" onclick="recordClassification()">Record</button>
         </div>
         <div id="resultsWrap"><table id="resultsTable"><thead><tr><th>Object</th><th>Your class</th><th>S/N</th></tr></thead><tbody></tbody></table></div>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" onclick="downloadResults()" style="flex:1">Download Results</button>
+        </div>
+        <p class="hint">Generates a session report (your observations and classifications, time-stamped) to turn in with your lab.</p>
       </div>
       <div class="panel">
         <h3>Spectral Lines</h3>
@@ -277,11 +286,75 @@
 </section>
 
 
+<!-- ============ INFORMATION ============ -->
+<section id="scr-info" class="screen">
+  <div class="info-body">
+    <h2>What this is</h2>
+    <p>This activity simulates <b>optical spectroscopy of stars</b> with a photon-counting spectrometer, and the
+       <b>MK-style classification</b> of the resulting spectra against a library of real spectral standards —
+       including line identification, zoom analysis, and equivalent-width measurement. It runs in any modern
+       browser with no installation.</p>
+
+    <h2>The exercise, briefly</h2>
+    <p>1. Open the dome and slew to a program star from the hot list (tracking engages on arrival). Long slews
+       land close to — but rarely exactly on — the target, so switch to the <b>Telescope</b> view and use the
+       N/E/S/W controls to center the star between the slit jaws. 2. Press <b>Go</b> and watch photons
+       accumulate; the dots resolve into a spectrum as counts build. Integrate to S/N ≳ 15–20 for rough
+       classification (higher if you plan to measure equivalent widths), then <b>Save</b>. 3. On the
+       <b>Classify Spectra</b> page, load your spectrum (or one from the pre-observed program list) and step
+       through the atlas until the difference trace (standard − unknown) flattens — that bracket is your
+       classification; record it. The <b>simple set</b> offers 13 well-spaced standards; the <b>full set</b>
+       offers every class-V subtype for bracketing to a single subclass. 4. In the <b>Analysis</b> panel, zoom
+       into features, toggle line identifications or mark a specific line from the Spectral Lines menu, and
+       measure equivalent widths: press <b>Measure EW</b>, then click the continuum at the left and right
+       shoulders of a line — the tool draws the linear pseudo-continuum, shades the line area, and reports
+       EW = Σ(1 − F/F<sub>c</sub>)Δλ, the same quick-look method astronomers use at the telescope.</p>
+
+    <h2>What is and isn't physical</h2>
+    <p><b>Photon counting</b> is genuinely Poisson per channel: S/N grows as √(integration time) and count rates
+       scale with stellar V magnitude on the simulated 0.9 m telescope — so noisy student spectra are noisy for
+       the right reasons, and re-measuring an equivalent width on a longer exposure genuinely improves it. With
+       <b>tracking off</b>, the field drifts west at the true sidereal rate, and a star can drift out of the
+       slit mid-integration, leaving only sky photons. The <b>pointing model</b> lands 0–0.9′ from the target
+       with a random per-target error that is repeatable within a session, as at a real telescope. <b>Time</b>
+       uses real UT/JD/LST for a Kitt Peak–like site. <b>Field stars</b> away from the program list carry
+       randomly assigned spectral types drawn from a realistic distribution — a practice (and limitation)
+       knowingly inherited from VIREO's own star catalog. Nothing here is a source of research measurements.</p>
+
+    <h2>Spectral standards &amp; data provenance</h2>
+    <p>The standards are real, flux-calibrated, de-reddened stellar spectra from <b>Jacoby, G. H., Hunter, D. A.,
+       &amp; Christian, C. A. 1984, "A Library of Stellar Spectra", ApJS, 56, 257</b>, distributed by the Space
+       Telescope Science Institute (archive.stsci.edu, reference-atlases collection); please retain this
+       citation in derivative works. The packaged atlas is built by the repository script
+       <span style="font-family:var(--mono)">get_jacoby_atlas.py</span>. When the library is installed, both the
+       simple and full standard sets — and every simulated spectrum — are drawn from it, so a spectrum fits
+       either ladder. One deliberate processing step: on load, each Jacoby spectrum is rectified by an iterative
+       sigma-clipped polynomial continuum fit and re-colored onto the app's model continuum, keeping all
+       spectra on one continuum system; line profiles — everything classification depends on — are untouched.
+       Anyone wanting the original spectrophotometry should use the STScI files directly. If the atlas file is
+       absent, the activity falls back to self-consistent synthetic standards and says so in the interface.</p>
+
+    <h2>Credit &amp; lineage</h2>
+    <p>The aim of this project is to give students a realistic experience of controlling a telescope and
+       analyzing their own data, grounded in the working practices of professional astronomy. The workflow
+       here — acquiring a target on a spectrograph slit, integrating to a target signal-to-noise, and
+       classifying spectra against standard-star atlases — is standard astronomical practice, used essentially
+       unchanged at observatories everywhere.</p>
+    <p>In bringing that practice into the classroom we gratefully acknowledge <b>Project CLEA</b>
+       (Contemporary Laboratory Experiences in Astronomy, Gettysburg College) and <b>VIREO — The Virtual
+       Educational Observatory</b> by Glenn Snyder and Laurence Marschall, whose exercise
+       <i>Classification of Stellar Spectra</i> demonstrated decades ago how effective simulated observing can
+       be, and which we consulted while designing this activity. This software was not produced by, and is not
+       affiliated with or endorsed by, Project CLEA, its authors, or Gettysburg College, and contains none of
+       their code or data.</p>
+    <p>Pedagogical design, feature direction, and classroom testing: <b>Matthew Hankins, Arkansas Tech University</b>.
+       Software written collaboratively with <b>Claude</b> (Anthropic), under the instructor's direction.
+       Released under the MIT License.</p>
+  </div>
+</section>
+
 <footer>
-  Spectral standards: Jacoby, G. H., Hunter, D. A., &amp; Christian, C. A. 1984, "A Library of Stellar Spectra",
-  ApJS, 56, 257 — data distributed by STScI. Retain this citation in derivative works.
-  Part of the <a href="../" style="color:var(--cyan)">Open Educational Observatory</a>;
-  see the homepage for project credits and license.
+  Open Educational Observatory — Classification of Stellar Spectra. MIT licensed.
 </footer>
 
 <!-- Real Jacoby atlas auto-loads if the companion script has been run -->
@@ -289,6 +362,14 @@
 
 <script>
 "use strict";
+/* stable per-session identifier — regenerated on every page load, so two
+   students' sessions never share one; embedded in the results export */
+const SESSION_ID=(function(){
+  const t=Date.now().toString(36);
+  const r=Math.random().toString(36).slice(2,10);
+  return (t+r).toUpperCase();
+})();
+const SESSION_START=new Date();
 /* =====================================================================
    OPEN EDUCATIONAL OBSERVATORY — v0.2
    time · sky/starfield · dome · telescope (with animated slews)
@@ -920,14 +1001,24 @@ function drawSpec(){
   }
 }
 const savedSpectra=[];
+let obsCounter=0;
 function saveSpectrum(){
   let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
   const data=new Float64Array(NCH);
   for(let i=0;i<NCH;i++)data[i]=spec.counts[i]/mx;
-  const name=(spec.target?(spec.target.name||"Field star V="+(spec.target.mag??spec.target.V).toFixed(1)):"Blank sky")
-    +" · "+spec.secs.toFixed(0)+"s";
+  const isField=spec.target && !spec.target.name;
+  const objName=spec.target?(spec.target.name||"Field star V="+(spec.target.mag??spec.target.V).toFixed(1)):"Blank sky";
+  const name=objName+" · "+spec.secs.toFixed(0)+"s";
   const snr=+document.getElementById("snrOut").textContent;
-  savedSpectra.push({name,data,snr,hiddenType:spec.target?tToType(spec.target.t):"—"});
+  // fingerprint fields: the combination of these is effectively unique per session
+  savedSpectra.push({name,data,snr,hiddenType:spec.target?tToType(spec.target.t):"—",
+    obsId:++obsCounter,
+    objName, isField,
+    exactSecs:+spec.secs.toFixed(2),
+    totalCounts:Math.round(spec.total),
+    ra:st.ra, dec:st.dec,
+    V:spec.target?(spec.target.mag??spec.target.V):null,
+    when:new Date().toISOString()});
   refreshSavedUI();refreshUnknownSel();
   document.getElementById("specStatus").textContent="Saved “"+name+"”. Open Classify Spectra to work on it.";
   spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;spec.template=null;
@@ -1084,18 +1175,118 @@ cc.addEventListener("click",e=>{
   document.getElementById("curInt").textContent=cls.unknown.data[i].toFixed(3);
   drawCls();drawZoom();
 });
+const classifications={};   // keyed by unknown name -> {name, userClass, snr, obsId, isProgram}
 function recordClassification(){
   if(!cls.unknown)return;
-  const tb=document.querySelector("#resultsTable tbody");
   const name=cls.unknown.name;
   const val=document.getElementById("clsTypeSel").value;
   const snr=cls.unknown.snr??"—";
-  // reclassifying the same object updates its row rather than adding a new one
-  let row=[...tb.rows].find(r=>r.cells[0].textContent===name);
-  if(!row){row=tb.insertRow();row.insertCell();row.insertCell();row.insertCell();}
-  row.cells[0].textContent=name;
-  row.cells[1].textContent=val;
-  row.cells[2].textContent=snr;
+  const u=cls.unknown;
+  classifications[name]={
+    name, userClass:val, snr,
+    obsId:u.obsId??null,                       // saved-spectrum observations carry this
+    isProgram:/^Program #/.test(name),         // pre-observed practice spectra
+    isField:u.isField??false,
+    when:new Date().toISOString(),
+  };
+  renderResultsTable();
+}
+function renderResultsTable(){
+  const tb=document.querySelector("#resultsTable tbody");
+  tb.innerHTML="";
+  for(const k of Object.keys(classifications)){
+    const c=classifications[k];
+    const row=tb.insertRow();
+    row.insertCell().textContent=c.name;
+    row.insertCell().textContent=c.userClass;
+    row.insertCell().textContent=c.snr;
+  }
+}
+
+/* ---- results export for submission --------------------------------------
+   A plain-text report the student turns in. It records the session and each
+   observation's fingerprint — the exact integration time, photon total, S/N,
+   pointing, and timestamp — quantities that arise from that student's own
+   run and are effectively unique per session. A short checksum over the
+   observation log lets an instructor spot two "different" files built from
+   the same underlying session. This is a deterrent and a spot-check aid, not
+   cryptographic security. */
+function fnv1a(str){
+  let h=0x811c9dc5;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=(h*0x01000193)>>>0;}
+  return ("00000000"+h.toString(16)).slice(-8).toUpperCase();
+}
+function buildResultsReport(){
+  const L=[];
+  const pad=(s,n)=>String(s).padEnd(n);
+  L.push("OPEN EDUCATIONAL OBSERVATORY — CLASSIFICATION OF STELLAR SPECTRA");
+  L.push("Session results report");
+  L.push("");
+  L.push("Session ID   : "+SESSION_ID);
+  L.push("Session start: "+SESSION_START.toISOString());
+  L.push("Generated    : "+new Date().toISOString());
+  L.push("Atlas in use : "+(ATLAS_SOURCE==="synthetic"?"synthetic fallback":
+                            ATLAS_SOURCE==="full"?"Jacoby full set":"Jacoby simple set"));
+  L.push("");
+
+  // ---- observation log (fingerprints) ----
+  L.push("OBSERVATION LOG");
+  L.push("-".repeat(78));
+  L.push(pad("#",4)+pad("Object",30)+pad("kind",7)+pad("int(s)",9)+pad("counts",10)+pad("S/N",7)+"time (UTC)");
+  const fpParts=[];
+  if(savedSpectra.length===0){
+    L.push("(no spectra saved this session)");
+  }else{
+    for(const s of savedSpectra){
+      L.push(pad(s.obsId,4)+pad(s.objName.slice(0,29),30)+pad(s.isField?"field":"hot",7)+
+             pad(s.exactSecs.toFixed(2),9)+pad(s.totalCounts,10)+pad(s.snr.toFixed(1),7)+s.when);
+      // fingerprint uses the noise-realization-dependent quantities
+      fpParts.push([s.obsId,s.objName,s.exactSecs,s.totalCounts,s.snr,
+                    s.ra.toFixed(5),s.dec.toFixed(5),s.when].join("|"));
+    }
+  }
+  L.push("");
+
+  // ---- classifications ----
+  L.push("CLASSIFICATIONS");
+  L.push("-".repeat(78));
+  L.push(pad("Object",34)+pad("Your class",12)+pad("S/N",7)+"obs#");
+  const keys=Object.keys(classifications);
+  if(keys.length===0){
+    L.push("(no classifications recorded)");
+  }else{
+    for(const k of keys){
+      const c=classifications[k];
+      L.push(pad(c.name.slice(0,33),34)+pad(c.userClass,12)+
+             pad(String(c.snr),7)+(c.obsId??"—"));
+      fpParts.push(["C",c.name,c.userClass,c.obsId??"-",c.when].join("|"));
+    }
+  }
+  L.push("");
+
+  // ---- verification block ----
+  const payload=fpParts.join("\n");
+  const check=fnv1a(SESSION_ID+"\n"+payload);
+  L.push("VERIFICATION");
+  L.push("-".repeat(78));
+  L.push("Observations : "+savedSpectra.length+"   Classifications: "+keys.length);
+  L.push("Session check: "+SESSION_ID+"-"+check);
+  L.push("");
+  L.push("This report records your individual observing session. The session ID and");
+  L.push("check code are derived from your own measurements (integration times, photon");
+  L.push("counts, and timestamps), which differ from run to run. Submit this file with");
+  L.push("your lab handout.");
+  return L.join("\n");
+}
+function downloadResults(){
+  const report=buildResultsReport();
+  const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+  const blob=new Blob([report],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="stellar-spectra-results_"+stamp+".txt";
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
 }
 
 /* ---------------- analysis: line list, zoom, equivalent width ------------- */
@@ -1296,11 +1487,18 @@ function buildLineUI(){
 
 /* ---------------- screen switching & init ---------------- */
 function showScreen(id){
-  for(const k of["obs","cls"]){
+  for(const k of["obs","cls","info"]){
     document.getElementById("scr-"+k).classList.toggle("active",id===k);
     document.getElementById("tab"+k[0].toUpperCase()+k.slice(1)).classList.toggle("active",id===k);
   }
   if(id==="cls"){drawCls();drawZoom();}
+}
+/* A session has progress worth protecting if any spectra have been saved,
+   an integration is sitting unsaved on the spectrometer, or classifications
+   have been recorded. Leaving the page discards all of it. */
+function hasProgress(){
+  return savedSpectra.length>0 || spec.total>0 ||
+    Object.keys(classifications).length>0;
 }
 (function init(){
   const hs=document.getElementById("hotSel");
@@ -1308,6 +1506,12 @@ function showScreen(id){
   regenProgramSpectra();
   buildAtlasUI();buildLineUI();refreshUnknownSel();refreshSavedUI();
   if(window.JACOBY_ATLAS)registerJacobyAtlas(window.JACOBY_ATLAS);  // enables the toggle; synthetic stays active
+  document.getElementById("homeLink").addEventListener("click",e=>{
+    if(hasProgress()&&!confirm(
+      "Leaving this page will end your session — saved spectra, the current "+
+      "integration, and recorded classifications will all be lost.\n\n"+
+      "Go to the homepage anyway?"))e.preventDefault();
+  });
   requestAnimationFrame(frame);
 })();
 </script>
