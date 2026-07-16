@@ -90,11 +90,15 @@
   .pix-line{font-family:var(--mono);font-size:11px;color:var(--cyan);margin-top:4px;min-height:14px;letter-spacing:.05em}
   /* HR screen */
   .hr-grid{display:grid;grid-template-columns:minmax(480px,1fr) 300px;gap:14px;align-items:start;
-    grid-template-areas:"plot src" "plot fit" "table fit"}
+    grid-template-areas:"plot src" "plot fit" "table fit" "table saved"}
   #hrPlotPanel{grid-area:plot}
   #hrSrcPanel{grid-area:src}
   #hrFitPanel{grid-area:fit}
   #hrTablePanel{grid-area:table}
+  #hrSavedPanel{grid-area:saved}
+  #savedList{list-style:none;margin-top:6px}
+  #savedList li{font-family:var(--mono);font-size:11.5px;padding:5px 6px;border:1px solid var(--line);border-radius:3px;margin-bottom:5px;display:flex;justify-content:space-between;gap:6px;align-items:center;background:var(--panel-2)}
+  #savedList li button{padding:2px 8px;font-size:11px}
   #hrCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
   .fit-row{margin-bottom:10px}
   #dataWrap{max-height:280px;overflow-y:auto;margin-top:6px}
@@ -109,7 +113,7 @@
   .info-body b{color:#fff}
   @media (max-width:960px){
     .obs-grid{grid-template-columns:1fr;grid-template-areas:"dome" "tv" "side" "cam" "data"}
-    .hr-grid{grid-template-columns:1fr;grid-template-areas:"src" "plot" "fit" "table"}
+    .hr-grid{grid-template-columns:1fr;grid-template-areas:"src" "plot" "fit" "saved" "table"}
     .cam-body{flex-direction:column}
     .cam-left{width:100%;flex:1 1 auto}
   }
@@ -135,6 +139,7 @@
     <div><span class="lbl">Universal Time</span><span class="readout" id="utClock">--:--:--</span></div>
     <div><span class="lbl">Local Sidereal Time</span><span class="readout" id="lstClock">--:--:--</span></div>
     <div><span class="lbl">Julian Date</span><span class="readout" id="jdClock" style="min-width:160px">-------.----</span></div>
+    <div><span class="lbl">Session</span><span class="readout" id="sessOut" style="min-width:120px">--------</span></div>
     <div style="margin-left:auto"><span class="lbl">Site · 0.9 m Telescope · CCD UBVRI</span><span class="readout green" style="min-width:200px">KPNO-like · 31°57′N 111°36′W</span></div>
   </div>
 
@@ -189,10 +194,10 @@
       </div>
 
       <div class="panel">
-        <h3>Cluster Program</h3>
+        <h3>Target List · Star Clusters</h3>
         <select id="clusterSel" style="width:100%" onchange="loadCluster()" aria-label="Cluster"></select>
         <div class="row" style="margin-top:8px">
-          <button class="ctrl" id="slewBtn" onclick="slewToCluster()" style="flex:1">Slew to cluster</button>
+          <button class="ctrl" id="slewBtn" onclick="slewToCluster()" style="flex:1">Slew to Target</button>
         </div>
         <p class="hint">The CCD field is smaller than the clusters — offset the telescope to cover outer members.
           A few program stars are foreground/background interlopers.</p>
@@ -360,7 +365,15 @@
           <option value="0.2">[Fe/H] = +0.2 (metal-rich)</option>
         </select>
         <p class="hint">The isochrone inherits the distance modulus <i>and</i> reddening from your ZAMS fit — get those right first. Then match the main-sequence <b>turnoff</b> and subgiants: they are the age clock. Arrow keys nudge a focused slider one step at a time.</p>
+        <button class="ctrl" style="width:100%;margin-top:6px" onclick="saveFit()">Save current fit</button>
       </div>
+    </div>
+
+    <div id="hrSavedPanel" class="panel">
+      <h3>Saved Results &amp; Report</h3>
+      <ul id="savedList"><li style="justify-content:center;color:var(--text-dim)">no fits saved yet</li></ul>
+      <button class="ctrl" style="width:100%;margin-top:4px" onclick="downloadReport()"> Download Results </button>
+      <p class="hint">Save each cluster's fit when you're happy with it, then download the results when you've completed the activity.</p>
     </div>
 
     <div id="hrTablePanel" class="panel" style="display:none">
@@ -389,7 +402,7 @@
        in any modern browser with no installation.</p>
 
     <h2>The exercise, briefly</h2>
-    <p>1. Choose a cluster program, open the dome, and slew to the cluster (tracking engages on arrival). 2. Take a
+    <p>1. Choose a Target from the listed star clusters, open the dome, and slew to the cluster (tracking engages on arrival). 2. Take a
        preview image to check framing, then integrate through a filter; the camera returns the averaged image of the
        exposure stack. 3. On the image, place the aperture on a blank patch and <b>Set sky</b>, then switch to
        <b>Star</b> readings: click each program star, nudge the aperture onto its center, and <b>Record</b>. Measure
@@ -401,7 +414,10 @@
        the <b>Two-Color diagram</b> (U−B vs B−V) lets you determine E(B−V) independently of distance by sliding the
        intrinsic main-sequence locus along the reddening vector — the classic photometric method — before fitting the CMD. Two example catalogs
        (NGC 752, IC 4665) are available from the start for practicing the fitting tools — but the program clusters
-       must be measured at the telescope; no stored shortcut exists for them. 5. Convert your distance modulus to a distance:
+       must be measured at the telescope; no stored shortcut exists for them. When your fits are done, save each
+       one and download the <b>session report</b> - a timestamped PDF of your observing log, saved fits, and
+       diagrams, carrying a unique session code and this session’s photon noise, suitable for turning in
+       with your write-up. 5. Convert your distance modulus to a distance:
        log D = (V−M<sub>V</sub>)/5 + 1, ideally after correcting for extinction A<sub>V</sub> = 3.1·E(B−V).</p>
 
     <h2>What is and isn't physical</h2>
@@ -681,6 +697,8 @@ const st={
   records:{},
   sent:[]                                 // cluster ids sent to the HR Diagram page
 };
+const SESSION={start:new Date()};
+SESSION.code=Array.from({length:8},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
 const MAX_IMGS=10;
 const REQ_STARS=Math.max(1,parseInt(new URLSearchParams(location.search).get("nreq"))||25);
 
@@ -1223,7 +1241,7 @@ function recordReading(){
   const r=st.lastResult, id=document.getElementById("objSel").value;
   if(!r||!id||id==="FIELD")return;
   if(!st.records[id])st.records[id]={};
-  st.records[id][r.filter]={mag:r.mag,snr:r.snr};
+  st.records[id][r.filter]={mag:r.mag,snr:r.snr,at:new Date()};
   status("camStatus","Recorded "+id+"  "+r.filter+" = "+r.mag.toFixed(2)+".");
   document.getElementById("recBtn").disabled=true;
   rebuildTable();hrRedraw();
@@ -1533,6 +1551,212 @@ hr.addEventListener("mousemove",e=>{
 hr.addEventListener("mouseleave",()=>{if(hrState.hover){hrState.hover=null;hrRedraw();}});
 
 /* ============================================================
+   13b. Saved fits, recall, and the session report (PDF)
+   ============================================================ */
+const savedFits=[];
+function saveFit(){
+  const srcSel=document.getElementById("hrSrcSel");
+  if(!srcSel.value){status("camStatus","");alert("Choose a data source before saving a fit.");return;}
+  const n=hrData().length;
+  if(n===0){alert("The selected source has no plottable stars yet.");return;}
+  savedFits.push({
+    when:new Date(), src:srcSel.value,
+    label:srcSel.options[srcSel.selectedIndex].text,
+    diag:document.getElementById("diagSel").value,
+    DM:+document.getElementById("slDM").value,
+    EBV:+document.getElementById("slEBV").value,
+    logAge:+document.getElementById("slAge").value,
+    feh:document.getElementById("isoZ").value,
+    zams:hrState.zams, iso:hrState.iso, n:n
+  });
+  rebuildSavedList();
+}
+function recallFit(i){
+  const f=savedFits[i];if(!f)return;
+  const srcSel=document.getElementById("hrSrcSel");
+  if([...srcSel.options].some(o=>o.value===f.src))srcSel.value=f.src;
+  document.getElementById("diagSel").value=f.diag;
+  document.getElementById("slDM").value=f.DM;
+  document.getElementById("slEBV").value=f.EBV;
+  document.getElementById("slAge").value=f.logAge;
+  document.getElementById("isoZ").value=f.feh;
+  hrState.zams=f.zams;hrState.iso=f.iso;
+  document.getElementById("zamsBtn").classList.toggle("on",f.zams);
+  document.getElementById("isoBtn").classList.toggle("on",f.iso);
+  hrRedraw();
+}
+function deleteFit(i){savedFits.splice(i,1);rebuildSavedList();}
+function fitSummary(f){
+  const age=Math.pow(10,f.logAge);
+  const ageS=age>=1e9?(age/1e9).toFixed(2)+" Gyr":(age/1e6).toFixed(0)+" Myr";
+  return "V-Mv "+f.DM.toFixed(2)+" · E "+f.EBV.toFixed(2)+" · "+ageS;
+}
+function rebuildSavedList(){
+  const ul=document.getElementById("savedList");ul.innerHTML="";
+  if(!savedFits.length){
+    ul.innerHTML="<li style='justify-content:center;color:var(--text-dim)'>no fits saved yet</li>";return;}
+  savedFits.forEach((f,i)=>{
+    const li=document.createElement("li");
+    const info=document.createElement("span");
+    info.textContent=(i+1)+". "+f.label.replace(" (example catalog)","").replace("My photometry — ","")+" · "+fitSummary(f);
+    const btns=document.createElement("span");
+    const rb=document.createElement("button");rb.className="ctrl";rb.textContent="Recall";rb.onclick=()=>recallFit(i);
+    const db=document.createElement("button");db.className="ctrl";db.textContent="✕";db.title="Delete";db.onclick=()=>deleteFit(i);
+    btns.append(rb,document.createTextNode(" "),db);
+    li.append(info,btns);ul.appendChild(li);
+  });
+}
+
+/* ---- session report: minimal dependency-free PDF 1.4 writer,
+   ported from the Hubble's Law activity (text via standard fonts,
+   diagram canvases embedded as DCTDecode JPEGs) ---- */
+function fmtStamp(d){
+  const p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "
+    +p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UT";
+}
+function sanitize(t){
+  return String(t)
+    .replace(/\u2212/g,"-").replace(/[\u2013\u2014]/g,"-")
+    .replace(/\u00d7/g,"x").replace(/\u2032/g,"'").replace(/\u2033/g,'"')
+    .replace(/[\u201c\u201d]/g,'"').replace(/[\u2018\u2019]/g,"'")
+    .replace(/\u2026/g,"...")
+    .replace(/[^\x20-\x7E\xC5\xF6\xB7\xB0]/g,"?")
+    .replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/\\(?![()])/g,"\\\\");
+}
+function pad(t,w){t=String(t);return t.length>=w?t.slice(0,w-1)+" ":t+" ".repeat(w-t.length);}
+function captureFitJpeg(f){
+  // temporarily apply a saved fit, redraw, snapshot, then restore current UI
+  const ids=["hrSrcSel","diagSel","slDM","slEBV","slAge","isoZ"];
+  const prev=ids.map(id=>document.getElementById(id).value);
+  const pz=hrState.zams,pi=hrState.iso;
+  recallFit(savedFits.indexOf(f));
+  const url=hr.toDataURL("image/jpeg",0.92);
+  ids.forEach((id,k)=>document.getElementById(id).value=prev[k]);
+  hrState.zams=pz;hrState.iso=pi;
+  document.getElementById("zamsBtn").classList.toggle("on",pz);
+  document.getElementById("isoBtn").classList.toggle("on",pi);
+  hrRedraw();
+  return {bin:atob(url.split(",")[1]),iw:hr.width,ih:hr.height};
+}
+function downloadReport(){
+  const recIds=Object.keys(st.records);
+  if(recIds.length===0){
+    alert("Record at least one star's photometry at the telescope before downloading a report.");
+    return;
+  }
+  const fits=savedFits.length?savedFits:null;
+  const PW=612,PH=792,MX=54;
+  const pages=[];let ops=[],y=0;const pageImgs=[];
+  const newPage=(img)=>{ops=[];pages.push(ops);pageImgs.push(img||null);y=PH-64;};
+  const line=(txt,font,size,x,dy)=>{
+    y-=(dy!=null?dy:size*1.35);
+    if(y<70){newPage();
+      ops.push("BT /F2 8 Tf "+MX+" "+(PH-50)+" Td (Session report, continued) Tj ET");}
+    ops.push("BT /"+font+" "+size+" Tf "+(x!=null?x:MX)+" "+y.toFixed(1)+" Td ("+sanitize(txt)+") Tj ET");
+  };
+  newPage();
+  line("OPEN EDUCATIONAL OBSERVATORY","F3",15,null,0);
+  line("Cluster Photometry & HR Diagrams - Session Report","F3",12);
+  line("Session "+SESSION.code+"  ·  started "+fmtStamp(SESSION.start)
+    +"  ·  report generated "+fmtStamp(new Date()),"F2",8.5,null,16);
+  line("Measured magnitudes carry this session's photon noise; sessions differ slightly by design.","F2",7.5);
+
+  line("Observing log - recorded photometry ("+recIds.length+" stars)","F3",11,null,24);
+  line(pad("star",10)+pad("U",7)+pad("B",7)+pad("V",7)+pad("R",7)+pad("I",7)
+    +pad("B-V",7)+pad("S/N(V)",8)+"last rec (UT)","F2",8.5);
+  const g=(r,x)=>r[x]?r[x].mag.toFixed(2):"-";
+  for(const id of recIds.sort()){
+    const r=st.records[id];
+    const bv=(r.B&&r.V)?(r.B.mag-r.V.mag).toFixed(2):"-";
+    let at=null;for(const f of ["U","B","V","R","I"])if(r[f]&&r[f].at&&(!at||r[f].at>at))at=r[f].at;
+    line(pad(id,10)+pad(g(r,"U"),7)+pad(g(r,"B"),7)+pad(g(r,"V"),7)+pad(g(r,"R"),7)+pad(g(r,"I"),7)
+      +pad(bv,7)+pad(r.V?r.V.snr.toFixed(0):"-",8)+(at?fmtStamp(at).slice(11,19):"-"),"F2",8.5,null,10.5);
+  }
+  const skyTxt=["U","B","V","R","I"].filter(f=>st.sky[f]!==null)
+    .map(f=>f+"="+st.sky[f].toFixed(1)).join("  ");
+  if(skyTxt)line("Sky calibrations (counts/sec in aperture):  "+skyTxt,"F2",8,null,14);
+
+  line("Saved fits","F3",11,null,24);
+  if(!fits){
+    line("(no fits were saved; the report includes the current slider state below)","F1",9);
+  }
+  const listFits=fits||[{
+    when:new Date(),label:(document.getElementById("hrSrcSel").selectedIndex>=0?
+      document.getElementById("hrSrcSel").options[document.getElementById("hrSrcSel").selectedIndex].text:"(none)"),
+    diag:document.getElementById("diagSel").value,
+    DM:+document.getElementById("slDM").value,EBV:+document.getElementById("slEBV").value,
+    logAge:+document.getElementById("slAge").value,feh:document.getElementById("isoZ").value,
+    zams:hrState.zams,iso:hrState.iso,n:hrData().length,current:true}];
+  for(const f of listFits){
+    const Dapp=Math.pow(10,f.DM/5+1), Dc=Math.pow(10,(f.DM-3.1*f.EBV)/5+1);
+    const age=Math.pow(10,f.logAge);
+    const ageS=age>=1e9?(age/1e9).toFixed(2)+" Gyr":(age/1e6).toFixed(0)+" Myr";
+    line((f.current?"Current state:  ":"Saved "+fmtStamp(f.when).slice(11,19)+":  ")+f.label
+      +"  ("+(f.diag==="ubbv"?"two-color diagram":"color-magnitude diagram")+", "+f.n+" stars)","F1",9.5,null,15);
+    line("   V-Mv = "+f.DM.toFixed(2)+"    E(B-V) = "+f.EBV.toFixed(2)
+      +"    log age = "+f.logAge.toFixed(2)+" ("+ageS+")    [Fe/H] = "+f.feh,"F2",8.5,null,11);
+    line("   D = "+Dapp.toFixed(0)+" pc uncorrected;  D = "+Dc.toFixed(0)+" pc = "
+      +(Dc*3.262).toFixed(0)+" ly corrected for A(V)=3.1·E(B-V)","F2",8.5,null,11);
+  }
+  line("All data are simulated for instruction.","F2",7.5,null,16);
+
+  /* ---- one diagram page per saved fit (or the current state) ---- */
+  const imgs=[];
+  const capture=fits?fits.map(f=>({f:f,img:captureFitJpeg(f)}))
+    :[{f:listFits[0],img:(hrRedraw(),{bin:atob(hr.toDataURL("image/jpeg",0.92).split(",")[1]),iw:hr.width,ih:hr.height})}];
+  for(const c of capture){
+    imgs.push(c.img);
+    const dw=PW-2*MX, dh=dw*c.img.ih/c.img.iw;
+    newPage(imgs.length-1);
+    ops.push("BT /F3 12 Tf "+MX+" "+(PH-70)+" Td ("+sanitize(c.f.label)+" - "+sanitize(fitSummary(c.f))+") Tj ET");
+    ops.push("q "+dw.toFixed(1)+" 0 0 "+dh.toFixed(1)+" "+MX+" "+(PH-90-dh).toFixed(1)+" cm /Im"+imgs.length+" Do Q");
+  }
+
+  /* ---- assemble ---- */
+  const objs=[];
+  objs[1]="<< /Type /Catalog /Pages 2 0 R >>";
+  objs[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objs[4]="<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>";
+  objs[5]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  let nextId=6;
+  const imgIds=imgs.map(im=>{
+    const id=nextId++;
+    objs[id]="<< /Type /XObject /Subtype /Image /Width "+im.iw+" /Height "+im.ih
+      +" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+im.bin.length
+      +" >>\nstream\n"+im.bin+"\nendstream";
+    return id;
+  });
+  const xobjDict=imgIds.length?" /XObject << "+imgIds.map((id,k)=>"/Im"+(k+1)+" "+id+" 0 R").join(" ")+" >>":"";
+  const kidIds=[];
+  for(let p=0;p<pages.length;p++){
+    const cid=nextId++,pid=nextId++;
+    const stream=pages[p].join("\n");
+    objs[cid]="<< /Length "+stream.length+" >>\nstream\n"+stream+"\nendstream";
+    objs[pid]="<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+PW+" "+PH+"] /Contents "+cid
+      +" 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>"+xobjDict+" >> >>";
+    kidIds.push(pid);
+  }
+  objs[2]="<< /Type /Pages /Count "+pages.length+" /Kids ["+kidIds.map(i=>i+" 0 R").join(" ")+"] >>";
+  let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  const offsets=[];
+  for(let i=1;i<objs.length;i++){
+    offsets[i]=out.length;
+    out+=i+" 0 obj\n"+objs[i]+"\nendobj\n";
+  }
+  const xref=out.length;
+  out+="xref\n0 "+objs.length+"\n0000000000 65535 f \n";
+  for(let i=1;i<objs.length;i++)out+=String(offsets[i]).padStart(10,"0")+" 00000 n \n";
+  out+="trailer\n<< /Size "+objs.length+" /Root 1 0 R >>\nstartxref\n"+xref+"\n%%EOF";
+  const bytes=new Uint8Array(out.length);
+  for(let i=0;i<out.length;i++)bytes[i]=out.charCodeAt(i)&0xFF;
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+  a.download="cluster_photometry_report_"+SESSION.code+".pdf";
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+/* ============================================================
    14. Main loop & init
    ============================================================ */
 let lastT=null;
@@ -1587,6 +1811,8 @@ function showScreen(id){
   st.raDeg=(lstHours(new Date())*15+360)%360;
   st.decDeg=31.96;
   status("telStatus","Telescope parked at zenith. Choose a cluster program and slew to your target.");
+  document.getElementById("sessOut").textContent=SESSION.code;
+  document.getElementById("sessOut2").textContent=SESSION.code;
   loadCluster();
   setEnabled();
   hrRedraw();
