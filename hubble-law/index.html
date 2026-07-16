@@ -91,10 +91,10 @@
   .hub-grid{display:grid;grid-template-columns:minmax(500px,1fr) 300px;gap:14px;align-items:start}
   #hubCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
   footer{padding:18px 22px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--line);max-width:1180px;margin:0 auto;line-height:1.6}
-  footer details{margin-top:6px}
-  footer summary{cursor:pointer;color:var(--cyan);width:fit-content}
-  footer summary:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-  footer details p{margin-top:6px}
+  .info-body{max-width:820px;line-height:1.65}
+  .info-body h2{font-family:var(--disp);letter-spacing:.1em;color:var(--amber);margin:22px 0 8px;font-size:18px}
+  .info-body p{margin-bottom:10px}
+  .info-body b{color:#fff}
   .cat-badge{font-family:var(--mono);font-size:12px;padding:4px 8px;border-radius:3px;display:inline-block;margin-top:8px;line-height:1.4}
   .cat-badge.hubble{background:#3a2d12;color:var(--amber)}
   .cat-badge.full{background:#153826;color:var(--green)}
@@ -119,7 +119,8 @@
     <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
     <button id="tabMez" onclick="showScreen('mez')">Measure Redshift</button>
     <button id="tabHub" onclick="showScreen('hub')">Hubble Diagram</button>
-    <a class="navlink" href="../">Homepage</a>
+    <button id="tabInfo" onclick="showScreen('info')">Information</button>
+    <a class="navlink" href="../" onclick="confirmLeave(event)">Homepage</a>
   </nav>
 </header>
 
@@ -201,7 +202,7 @@
       </div>
 
       <div class="panel">
-        <h3>Field List · Galaxy Clusters</h3>
+        <h3>Target List · Galaxy Clusters</h3>
         <select id="hotSel" style="width:100%" aria-label="Cluster field list"></select>
         <div class="row" style="margin-top:8px">
           <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to field</button>
@@ -344,7 +345,7 @@
     </div>
     <div class="stack">
       <div class="panel">
-        <h3>Fit Your Line</h3>
+        <h3>Fit Your Data</h3>
         <span class="lbl">Slope H₀ (km/s/Mpc)</span>
         <div class="row">
           <input type="range" id="hSlider" min="20" max="150" step="0.5" value="55" style="flex:1" oninput="hFromSlider()">
@@ -367,20 +368,88 @@
         <p class="hint">This estimate assumes the expansion rate has never changed — see the lab guide for what goes
           into it and how it compares with other methods.</p>
       </div>
+      <div class="panel">
+        <h3>Session Report</h3>
+        <button class="ctrl" style="width:100%" onclick="downloadReport()">Download session report (PDF)</button>
+        <p class="hint">Produces a timestamped PDF of this observing session — your observing log, data table, fit,
+          and Hubble diagram — to submit alongside your written work.</p>
+      </div>
     </div>
   </div>
 </section>
 
+<!-- ============ INFORMATION ============ -->
+<section id="scr-info" class="screen">
+  <div class="info-body">
+    <h2>What this is</h2>
+    <p>This activity simulates <b>measuring the redshifts and distances of galaxies</b> with an optical telescope and
+       photon-counting spectrometer, recreating — with modern tools — the experiment through which Edwin Hubble and
+       Milton Humason revealed the expanding Universe. Students build their own velocity–distance diagram, fit the
+       Hubble parameter, and estimate the age of the Universe. It runs in any modern browser with no installation.</p>
+
+    <h2>The exercise, briefly</h2>
+    <p>1. Choose a cluster field from the field list — the default <b>Hubble catalog</b> holds the six clusters of the
+       classic Hubble–Humason program (Virgo out to Hydra); the <b>full catalog</b> adds six more of Humason's survey
+       fields, including spiral-rich Hercules. Open the dome and slew; tracking engages on arrival. 2. In the Telescope
+       view, center a galaxy's nucleus between the slit jaws and integrate. Aim for S/N ≳ 10: bright Virgo members take
+       seconds, the faintest Hydra members over a minute — patience the sky really does demand. Save the spectrum.
+       3. On the <b>Measure Redshift</b> page, first classify the spectrum: elliptical (absorption lines on a red
+       continuum with a 4000 Å break) or star-forming (emission spikes on a blue continuum). Measure the Ca K &amp; H
+       line centers directly with the Line measurement tool, or select the matching template and slide the redshift
+       until every marker sits in a line at once — the marker pattern stretches as it slides, because lines move to
+       λ<sub>rest</sub> × (1+z). Distance comes from the apparent magnitude via the distance modulus, assuming
+       M = −22 for a bright cluster galaxy. Record at least one galaxy per field. 4. On the <b>Hubble Diagram</b> page,
+       fit a line through the origin to your points; its slope is H₀, and T = 1/H₀ ≈ 978/H₀ Gyr estimates the
+       expansion age.</p>
+
+    <h2>What is and isn't physical</h2>
+    <p><b>Photon counting</b> is genuinely Poisson: S/N grows as √(integration time), count rates scale with apparent
+       magnitude, and every exposure includes sky background with zero-redshift <b>[O I] airglow lines</b> at 5577 and
+       6300 Å — emission from Earth's own atmosphere, exactly as at a real telescope. One deliberate concession: the
+       count-rate–magnitude scaling is mildly compressed relative to strict flux scaling, so bright fields take seconds
+       rather than milliseconds while faint fields still cost real minutes. Placing the slit on a galaxy's outskirts
+       instead of its nucleus reduces the count rate; with <b>tracking off</b> the sky drifts west at the sidereal rate
+       and the target slides out of the slit mid-integration. Field-list slews land close to — but rarely exactly on —
+       the target, with a per-field pointing error that repeats within a session, as a real pointing model would. A
+       point-like object in the slit may turn out to be a <b>foreground Milky Way star</b>, whose lines show no
+       redshift — a trap the sky sets for real surveys too.</p>
+    <p>The cluster fields are named for, and placed near, the historic Hubble–Humason survey clusters, with recession
+       velocities close to the classical values — but <b>every galaxy, spectrum, and magnitude is generated by the
+       simulation</b> around a built-in expansion rate. Galaxies carry realistic peculiar velocities within their
+       clusters and ±0.25 mag of standard-candle scatter about the assumed M = −22, so student Hubble diagrams show
+       honest scatter about the trend; fitting the trend rather than any single point is part of the lesson. Elliptical
+       members have absorption-line spectra with a 4000 Å break; star-forming members show nebular emission ([O II],
+       Hβ, [O III], Hα) and render as spiral disks when resolvable — beyond z ≈ 0.066, Hα slides past the red end of
+       the spectrometer, which is the authentic reason real surveys lean on [O II] and Ca K/H at large distances. The
+       smallest galaxies are drawn slightly larger than strict scaling for visibility. Velocities use the classical
+       Doppler formula v = cz throughout, as in the historical exercise; the relativistic correction at the largest
+       redshifts here (z ≈ 0.2) is real but knowingly ignored. The simulated sky is deterministic — every student sees
+       the same galaxies at the same positions — but each browser session adds small observational
+       "calibration" noise (a few hundredths of a magnitude in photometry, a few tens of km/s in velocity), so
+       measured values differ slightly from session to session, as real observing nights do. A timestamped
+       <b>session report</b> (PDF) of the observing log, data table, and fitted diagram can be downloaded from the
+       Hubble Diagram page for submission alongside written work. Nothing in this simulation is a source of
+       research measurements.</p>
+
+    <h2>Credit &amp; lineage</h2>
+    <p>The aim of this project is to give students a realistic experience of controlling a telescope and analyzing
+       their own data, grounded in the working practices of professional astronomy. Measuring galaxy redshifts from
+       spectra — by line identification or template fitting — and building the redshift–distance relation is standard
+       astronomical practice, carried out essentially unchanged from Hubble's day to today's large surveys.</p>
+    <p>In bringing that practice into the classroom we gratefully acknowledge <b>Project CLEA</b> (Contemporary
+       Laboratory Experiences in Astronomy, Gettysburg College) and <b>VIREO — The Virtual Educational Observatory</b>
+       by Glenn Snyder and Laurence Marschall, whose exercise <i>The Hubble Redshift Distance Relation</i> demonstrated
+       decades ago how effective simulated observing can be, and which we consulted while designing this activity.
+       This software was not produced by, and is not affiliated with or endorsed by, Project CLEA, its authors, or
+       Gettysburg College, and contains none of their code or data.</p>
+    <p>Pedagogical design, feature direction, and classroom testing: <b>Matthew Hankins, Arkansas Tech University</b>.
+       Software written collaboratively with <b>Claude</b> (Anthropic), under the instructor's direction.
+       Released under the MIT License.</p>
+  </div>
+</section>
+
 <footer>
-  Part of the <a href="../" style="color:var(--cyan)">Open Educational Observatory</a> — see the homepage for project
-  credits, lineage, and license.
-  <details>
-    <summary>More about this simulation</summary>
-    <p>All galaxies, spectra, and photometry here are <b>simulated for instruction</b> — cluster names and recession
-      velocities follow the historic Hubble–Humason survey fields, but nothing in this activity is a source of research
-      measurements. Velocities use the classical Doppler formula v = cz; at the largest redshifts here (z ≈ 0.2) the
-      relativistic correction is real but is ignored for pedagogy.</p>
-  </details>
+  Open Educational Observatory — Hubble's Law. MIT licensed.
 </footer>
 
 <script>
@@ -417,6 +486,25 @@ const M_ABS=-22;              // assumed absolute magnitude of a bright cluster 
 const H0_TRUE=70;             // km/s/Mpc — the value baked into the simulated sky
 const REST_K=3933.7, REST_H=3968.5, REST_G=4304.4;
 const APERTURE=4.0;
+
+/* per-session observational "calibration" noise: the sky itself is identical for
+   everyone, but each browser session measures it slightly differently — ±0.03 mag
+   in photometry and ~±25 km/s in velocity, well below the built-in cluster
+   scatter. Re-observing a galaxy within a session repeats tonight's values. */
+const SESSION={
+  start:new Date(),
+  seed:(Date.now()^(Math.random()*0xFFFFFFFF))>>>0,
+};
+SESSION.code=("00000"+(SESSION.seed%0xFFFFF).toString(16).toUpperCase()).slice(-5);
+function hashStr(str){let h=2166136261>>>0;
+  for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function obsOf(g){
+  if(!g._obs){
+    const r=mulberry32(SESSION.seed^hashStr(g.name));
+    g._obs={m:g.m+rnorm(r)*0.03,z:Math.max(0,g.z+rnorm(r)*8.3e-5)};
+  }
+  return g._obs;
+}
 
 /* deterministic PRNG so every session sees the same sky (reproducible for grading) */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
@@ -556,8 +644,8 @@ const savedSpectra=[];
   const g1=GALAXIES.find(g=>g.cluster==="Virgo"&&g.gtype==="ell");
   const g2=GALAXIES.find(g=>g.cluster==="Hercules"&&g.gtype==="sf");
   for(const[g,snr]of[[g1,25],[g2,16]]){
-    savedSpectra.push({name:"Practice · "+g.name+" ("+g.cluster+")",m:g.m,snr,
-      data:noisify(galTemplate(g.z,g.gtype),snr),practice:true});
+    savedSpectra.push({name:"Practice · "+g.name+" ("+g.cluster+")",m:obsOf(g).m,snr,
+      data:noisify(galTemplate(obsOf(g).z,g.gtype),snr),practice:true});
   }
 })();
 
@@ -917,7 +1005,7 @@ function specGo(){
   spec.target=hit?hit.obj:null;
   spec.frac=hit?hit.frac:0;
   if(hit&&hit.obj.kind==="galaxy"){
-    spec.template=galTemplate(hit.obj.z,hit.obj.gtype);
+    spec.template=galTemplate(obsOf(hit.obj).z,hit.obj.gtype);
     const where=hit.frac>0.7?"nucleus":"outer regions";
     document.getElementById("specStatus").textContent=
       "Integrating on "+hit.obj.name+" ("+hit.obj.cluster+") — slit on the "+where+
@@ -1016,7 +1104,9 @@ function saveSpectrum(){
   const label=t?(isGal?t.name+" ("+t.cluster+")":"Foreground star"):"Blank sky";
   const name=label+" · "+spec.secs.toFixed(0)+"s";
   const snr=+document.getElementById("snrOut").textContent;
-  savedSpectra.push({name,data,snr,m:isGal?t.m:(t?t.mag:NaN),practice:false});
+  savedSpectra.push({name,data,snr,m:isGal?obsOf(t).m:(t?t.mag:NaN),practice:false,
+    savedAt:new Date(),secs:spec.secs,photons:spec.total,
+    cluster:isGal?t.cluster:null});
   refreshSavedUI();refreshMezSel();
   document.getElementById("specStatus").textContent="Saved “"+name+"”. Open Measure Redshift to work on it.";
   spec.counts=new Float64Array(NCH);spec.total=0;spec.secs=0;spec.template=null;
@@ -1293,7 +1383,7 @@ function recordRow(){
   const D=distMpc();
   if(!cand||D==null)return;
   rows.push({name:mez.cur.name.replace(/ · \d+s$/,""),m:mez.cur.m,
-    method:cand.method,gtype:cand.gtype,z:cand.z,v:cand.v,D});
+    method:cand.method,gtype:cand.gtype,z:cand.z,v:cand.v,D,recordedAt:new Date()});
   refreshTable();drawHub();
 }
 function delRow(i){rows.splice(i,1);refreshTable();drawHub();}
@@ -1364,9 +1454,147 @@ function drawHub(){
   document.getElementById("ageOut").textContent=(977.8/H0).toFixed(1)+" Gyr";
 }
 
+
+/* =====================================================================
+   SESSION REPORT — a minimal, dependency-free PDF (v1.4) writer.
+   Uses the standard Helvetica/Courier fonts (nothing embedded) and the
+   Hubble-diagram canvas as a DCTDecode (JPEG) image. Text is WinAnsi;
+   sanitize() maps the few non-WinAnsi characters this app uses.
+   ===================================================================== */
+function fmtStamp(d){
+  const p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "
+    +p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UT";
+}
+function sanitize(t){
+  return String(t)
+    .replace(/\u2212/g,"-").replace(/[\u2013\u2014]/g,"-")
+    .replace(/\u2032/g,"'").replace(/\u2033/g,'"')
+    .replace(/[\u201c\u201d]/g,'"').replace(/[\u2018\u2019]/g,"'")
+    .replace(/\u2026/g,"...")
+    .replace(/[^\x20-\x7E\xC5\xF6\xB7\xB0]/g,"?")   // keep Å ö · °
+    .replace(/\(/g,"\\(").replace(/\)/g,"\\)").replace(/\\(?![()])/g,"\\\\");
+}
+function downloadReport(){
+  if(rows.length===0){
+    alert("Record at least one galaxy in the data table before downloading a report.");
+    return;
+  }
+  drawHub();   // make sure the diagram reflects the current fit
+  const H0=parseFloat(document.getElementById("hBox").value)||0;
+  const PW=612,PH=792,MX=54;
+  /* ---- lay out text as (page, ops[]) ---- */
+  const pages=[];let ops=[],y=0;
+  const newPage=()=>{ops=[];pages.push(ops);y=PH-64;};
+  const line=(txt,font,size,x,dy)=>{
+    y-=(dy!=null?dy:size*1.35);
+    if(y<70){newPage();
+      ops.push("BT /F2 8 Tf "+MX+" "+(PH-50)+" Td (Session report, continued) Tj ET");}
+    ops.push("BT /"+font+" "+size+" Tf "+(x!=null?x:MX)+" "+y.toFixed(1)+" Td ("+sanitize(txt)+") Tj ET");
+  };
+  newPage();
+  line("OPEN EDUCATIONAL OBSERVATORY","F3",15,null,0);
+  line("Hubble's Law - Session Report","F3",12);
+  line("Session "+SESSION.code+"  ·  started "+fmtStamp(SESSION.start)
+    +"  ·  report generated "+fmtStamp(new Date()),"F2",8.5,null,16);
+  line("Values in this report carry this session's observational noise; sessions differ slightly by design.","F2",7.5);
+
+  line("Observing log","F3",11,null,24);
+  const myLog=savedSpectra.filter(sp=>!sp.practice);
+  if(myLog.length===0)line("(no spectra were saved at the telescope this session)","F1",9);
+  else{
+    line(pad("saved (UT)",21)+pad("object",30)+pad("integ s",9)+pad("S/N",7)+"photons","F2",8.5);
+    for(const sp of myLog)
+      line(pad(fmtStamp(sp.savedAt).slice(0,19),21)+pad(sp.name.replace(/ · \d+s$/,""),30)
+        +pad(sp.secs.toFixed(1),9)+pad(String(sp.snr),7)+Math.round(sp.photons).toLocaleString(),"F2",8.5,null,10.5);
+  }
+
+  line("Data table","F3",11,null,24);
+  line(pad("recorded",10)+pad("galaxy",25)+pad("m",7)+pad("method",11)+pad("type",14)
+    +pad("z",8)+pad("v km/s",9)+"D Mpc","F2",8.5);
+  for(const r of rows)
+    line(pad(fmtStamp(r.recordedAt).slice(11,19),10)+pad(r.name,25)+pad(r.m.toFixed(2),7)
+      +pad(r.method==="template"?"template":"K/H lines",11)+pad(r.gtype||"-",14)
+      +pad(r.z.toFixed(4),8)+pad(String(Math.round(r.v)),9)+r.D.toFixed(1),"F2",8.5,null,10.5);
+
+  line("Result","F3",11,null,24);
+  line("Fitted Hubble parameter:  H0 = "+H0.toFixed(1)+" km/s/Mpc","F1",10);
+  line("Implied expansion age:    T = 978/H0 = "+(977.8/H0).toFixed(1)+" Gyr","F1",10);
+  const rmsTxt=document.getElementById("rmsOut").textContent;
+  line("RMS scatter about line:   "+rmsTxt,"F1",10);
+  line("Distances assume M = -22; velocities use v = cz. All data are simulated for instruction.","F2",7.5,null,16);
+
+  function pad(t,w){t=String(t);return t.length>=w?t.slice(0,w-1)+" ":t+" ".repeat(w-t.length);}
+
+  /* ---- diagram image (JPEG from the canvas) on its own page ---- */
+  const jpegURL=hc.toDataURL("image/jpeg",0.92);
+  const jpegBin=atob(jpegURL.split(",")[1]);
+  const iw=hc.width,ih=hc.height;
+  const dw=PW-2*MX,dh=dw*ih/iw;
+  newPage();
+  ops.push("BT /F3 12 Tf "+MX+" "+(PH-70)+" Td (Hubble diagram \\(fit: v = "+H0.toFixed(1)+" · D\\)) Tj ET");
+  ops.push("q "+dw.toFixed(1)+" 0 0 "+dh.toFixed(1)+" "+MX+" "+(PH-90-dh).toFixed(1)+" cm /Im1 Do Q");
+
+  /* ---- assemble the PDF objects ---- */
+  const objs=[];   // 1-indexed bodies (without "N 0 obj")
+  const nPages=pages.length;
+  const kidIds=[];const contentBase=5;   // 1 cat, 2 pages, 3 fonts x3 (3,4,5)... plan ids below
+  // ids: 1 Catalog, 2 Pages, 3 F1, 4 F2, 5 F3, 6 image, 7.. page/content pairs
+  objs[1]="<< /Type /Catalog /Pages 2 0 R >>";
+  objs[3]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objs[4]="<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>";
+  objs[5]="<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  objs[6]="<< /Type /XObject /Subtype /Image /Width "+iw+" /Height "+ih
+    +" /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+jpegBin.length
+    +" >>\nstream\n"+jpegBin+"\nendstream";
+  let nextId=7;
+  for(let p=0;p<nPages;p++){
+    const cid=nextId++,pid=nextId++;
+    const stream=pages[p].join("\n");
+    objs[cid]="<< /Length "+stream.length+" >>\nstream\n"+stream+"\nendstream";
+    objs[pid]="<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+PW+" "+PH+"] /Contents "+cid
+      +" 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> /XObject << /Im1 6 0 R >> >> >>";
+    kidIds.push(pid);
+  }
+  objs[2]="<< /Type /Pages /Count "+nPages+" /Kids ["+kidIds.map(i=>i+" 0 R").join(" ")+"] >>";
+  /* serialize with a correct xref table */
+  let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  const offsets=[];
+  for(let i=1;i<objs.length;i++){
+    offsets[i]=out.length;
+    out+=i+" 0 obj\n"+objs[i]+"\nendobj\n";
+  }
+  const xref=out.length;
+  out+="xref\n0 "+objs.length+"\n0000000000 65535 f \n";
+  for(let i=1;i<objs.length;i++)out+=String(offsets[i]).padStart(10,"0")+" 00000 n \n";
+  out+="trailer\n<< /Size "+objs.length+" /Root 1 0 R >>\nstartxref\n"+xref+"\n%%EOF";
+  const bytes=new Uint8Array(out.length);
+  for(let i=0;i<out.length;i++)bytes[i]=out.charCodeAt(i)&0xFF;
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+  a.download="hubble_law_report_"+SESSION.code+".pdf";
+  a.click();URL.revokeObjectURL(a.href);
+}
+
 /* ---------------- navigation & init ---------------- */
+/* leaving discards the session — warn if there is progress. Progress means:
+   any saved (non-practice) spectrum, any data-table row, or counts on the
+   detector right now. */
+function hasProgress(){
+  return savedSpectra.some(sp=>!sp.practice)||rows.length>0||spec.total>0;
+}
+function confirmLeave(e){
+  if(hasProgress()&&!window.confirm(
+    "Leaving for the homepage will end your observing session.\n"+
+    "Saved spectra and your data table are NOT stored and will be lost.\n\n"+
+    "Leave anyway?"))e.preventDefault();
+}
+/* the same protection for refresh, tab close, and the back button */
+window.addEventListener("beforeunload",e=>{
+  if(hasProgress()){e.preventDefault();e.returnValue="";}
+});
 function showScreen(id){
-  for(const s of["obs","mez","hub"]){
+  for(const s of["obs","mez","hub","info"]){
     document.getElementById("scr-"+s).classList.toggle("active",s===id);
     document.getElementById("tab"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===id);
   }
