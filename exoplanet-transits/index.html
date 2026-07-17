@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Educational Observatory · Exoplanet Transits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0a0d13; --panel:#141a24; --panel-2:#1b2330; --line:#2a3546;
+    --amber:#ffb454; --amber-dim:#8a6430; --cyan:#6fd3e0; --red:#e4573d;
+    --green:#7ee29a; --text:#cdd6e4; --text-dim:#7d8aa0;
+    --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif; --disp:'Rajdhani',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--night);color:var(--text);font-family:var(--sans);font-size:14px}
+  header{display:flex;align-items:baseline;gap:18px;padding:14px 22px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.14em;color:#fff}
+  header h1 span{color:var(--amber)}
+  header .sub{font-size:12px;color:var(--text-dim);letter-spacing:.06em}
+  nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  nav button,nav a.navlink{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.1em;background:transparent;
+    color:var(--text-dim);border:1px solid var(--line);padding:7px 14px;cursor:pointer;border-radius:3px;
+    text-decoration:none;display:inline-block}
+  nav button.active{color:var(--night);background:var(--amber);border-color:var(--amber)}
+  nav button:focus-visible,nav a.navlink:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .screen{display:none;padding:16px 22px 30px;max-width:1220px;margin:0 auto}
+  .screen.active{display:block}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px}
+  .panel h3{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;color:var(--text-dim);
+    text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+  .readout{font-family:var(--mono);color:var(--amber);background:#0d0a04;border:1px solid #3a2d12;
+    border-radius:3px;padding:3px 8px;letter-spacing:.08em;text-shadow:0 0 6px rgba(255,180,84,.45);
+    font-size:15px;display:inline-block;min-width:110px;text-align:right}
+  .readout.big{font-size:20px;min-width:150px}
+  .readout.small{font-size:13px;min-width:90px}
+  .readout.green{color:var(--green);border-color:#1e4029;text-shadow:0 0 6px rgba(126,226,154,.4)}
+  .readout.cyan{color:var(--cyan);border-color:#123240;text-shadow:0 0 6px rgba(111,211,224,.4)}
+  .readout.red{color:var(--red);border-color:#40140d;text-shadow:0 0 6px rgba(228,87,61,.4)}
+  .lbl{font-size:11px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:2px}
+  button.ctrl{font-family:var(--disp);font-weight:600;letter-spacing:.08em;background:var(--panel-2);color:var(--text);
+    border:1px solid var(--line);border-radius:3px;padding:6px 12px;cursor:pointer;font-size:13px}
+  button.ctrl:hover{border-color:var(--amber-dim)}
+  button.ctrl:disabled{opacity:.35;cursor:default}
+  button.ctrl.on{background:var(--amber);color:var(--night);border-color:var(--amber)}
+  button.ctrl.cy{border-color:#1c4652}
+  button.ctrl.cy.on{background:var(--cyan);color:var(--night);border-color:var(--cyan)}
+  button.ctrl:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  select,input[type=text],input[type=number]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:3px;
+    padding:5px 8px;font-family:var(--mono);font-size:13px}
+  select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  input[type=range]{accent-color:var(--amber)}
+  .obs-grid{display:grid;grid-template-columns:minmax(430px,1fr) 300px;gap:14px;align-items:start;
+    grid-template-areas:"tv dome" "tv side" "cam side" "cam side"}
+  #obsTv{grid-area:tv}
+  #domePanel{grid-area:dome}
+  #obsSide{grid-area:side}
+  #camPanel{grid-area:cam}
+  .tv-wrap{position:relative}
+  #tvCanvas,#camCanvas{background:#000;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
+  #camCanvas{cursor:crosshair}
+  .tv-tag{position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:11px;color:var(--text-dim);
+    letter-spacing:.1em;pointer-events:none}
+  .tv-tag b{color:var(--amber)}
+  .clock-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+  .coord-row{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+  .nsew{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,36px);gap:5px;justify-content:center;margin:8px 0}
+  .nsew button{font-family:var(--disp);font-weight:700;font-size:15px}
+  .nsew .blank{visibility:hidden;border:none;background:none}
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spread{justify-content:space-between}
+  .dome-switch{display:flex;align-items:center;gap:10px}
+  .dome-led{width:10px;height:10px;border-radius:50%;background:#5a1f14;box-shadow:0 0 4px rgba(228,87,61,.6)}
+  .dome-led.open{background:var(--green);box-shadow:0 0 6px rgba(126,226,154,.8)}
+  .hint{color:var(--text-dim);font-size:12px;line-height:1.55;margin-top:6px}
+  .statusline{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:8px;min-height:16px}
+  .warnline{font-family:var(--mono);font-size:12px;color:var(--red);margin-top:4px;min-height:16px}
+  .filter-btns{display:flex;gap:5px}
+  .filter-btns button{min-width:38px}
+  /* camera two-column body (as in cluster-photometry) */
+  .cam-body{display:flex;gap:14px;align-items:flex-start}
+  .cam-left{width:200px;flex:0 0 200px;display:flex;flex-direction:column;gap:10px}
+  .cam-main{flex:1;min-width:0}
+  .cam-left .readout{width:100%;text-align:right}
+  .cam-left button.ctrl{width:100%}
+  .cam-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;align-items:flex-end}
+  .aptable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-top:8px}
+  .aptable th,.aptable td{border:1px solid var(--line);padding:4px 6px;text-align:right;white-space:nowrap}
+  .aptable th{color:var(--text-dim);font-weight:500}
+  .aptable td:first-child,.aptable th:first-child{text-align:left}
+  .aptable td:nth-child(2){text-align:left}
+  .ap-ok{color:var(--green)} .ap-sat{color:var(--red)} .ap-low{color:var(--amber)} .ap-none{color:var(--text-dim)}
+  #fitLog tbody tr{cursor:pointer}
+  #fitLog tbody tr:hover td{background:#202a3a}
+  #fitLog tbody tr.sel td{background:#2a3143;color:#fff}
+  .pbar{height:16px;background:#0d1420;border:1px solid var(--line);border-radius:3px;overflow:hidden;flex:1;min-width:180px}
+  .pfill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber-dim),var(--amber))}
+  #liveCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block;margin-top:10px}
+  .warp-tag{font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:.06em}
+  .fc-times{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  /* ---- fit screen: wide slider column ---- */
+  .fit-grid{display:grid;grid-template-columns:minmax(440px,1fr) 400px;gap:14px;align-items:start}
+  #lcCanvas,#resCanvas{background:#0d1420;border:1px solid var(--line);border-radius:4px;width:100%;display:block}
+  #resCanvas{margin-top:8px}
+  .slider-row{display:grid;grid-template-columns:96px 1fr 86px;gap:10px;align-items:center;margin-top:12px}
+  .slider-row .lbl{margin:0}
+  .slider-row input[type=number]{width:100%}
+  .slider-row input[type=range]{height:22px}
+  .eq{font-family:var(--mono);font-size:12px;color:var(--text-dim);line-height:1.8;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:3px;padding:8px 10px;margin-top:8px}
+  .eq b{color:var(--amber);font-weight:500}
+  footer{padding:18px 22px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--line);max-width:1220px;margin:0 auto;line-height:1.6}
+  .info-body{max-width:820px;line-height:1.65}
+  .info-body h2{font-family:var(--disp);letter-spacing:.1em;color:var(--amber);margin:22px 0 8px;font-size:18px}
+  .info-body p{margin-bottom:10px}
+  .info-body b{color:#fff}
+  @media (max-width:960px){
+    .obs-grid{grid-template-columns:1fr;grid-template-areas:"dome" "tv" "side" "cam"}
+    .fit-grid{grid-template-columns:1fr}
+    .cam-body{flex-direction:column}
+    .cam-left{width:100%;flex:1 1 auto}
+  }
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  /* ---- printable report (hidden on screen; the only thing printed) ---- */
+  #printRoot{display:none}
+  @media print{
+    @page{size:letter portrait;margin:14mm}
+    html,body{background:#fff!important;color:#000!important}
+    header,nav,footer,.screen{display:none!important}
+    #printRoot{display:block!important}
+    #printRoot .pg{page-break-after:always;break-after:page;font-family:Georgia,'Times New Roman',serif;color:#000}
+    #printRoot .pg:last-child{page-break-after:auto;break-after:auto}
+    #printRoot .phead{display:flex;justify-content:space-between;align-items:baseline;
+      border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:10px;font-size:10pt}
+    #printRoot .pid{font-family:'Courier New',monospace;font-size:9pt;letter-spacing:.08em}
+    #printRoot h1{font-size:16pt;margin:0 0 2px}
+    #printRoot .psub{font-size:9.5pt;color:#444;margin-bottom:8px}
+    #printRoot svg{display:block;margin:0 0 6px}
+    #printRoot .pcols{display:flex;gap:14px;align-items:flex-start;margin-top:6px}
+    #printRoot .pcols .ptab{flex:1}
+    #printRoot .ptab{border-collapse:collapse;font-size:9.5pt;width:100%;margin-bottom:10px}
+    #printRoot .ptab th,#printRoot .ptab td{border:1px solid #999;padding:3px 6px;text-align:left}
+    #printRoot .ptab th{background:#eee;font-weight:bold}
+    #printRoot .ptab.wide td:not(:first-child),#printRoot .ptab.wide th:not(:first-child){text-align:right}
+    #printRoot .pnote{font-size:9pt;line-height:1.5;margin-top:10px;color:#222}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OPEN EDUCATIONAL <span>OBSERVATORY</span></h1>
+  <div class="sub">Exoplanet Transits · time-series photometry</div>
+  <nav>
+    <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
+    <button id="tabFit" onclick="showScreen('fit')">Fit the Transit</button>
+    <button id="tabInfo" onclick="showScreen('info')">Information</button>
+    <a class="navlink" href="../" onclick="return confirmLeave()">Homepage</a>
+  </nav>
+</header>
+
+<!-- ============ OBSERVATORY ============ -->
+<section id="scr-obs" class="screen active">
+  <div class="clock-row">
+    <div><span class="lbl">Universal Time</span><span class="readout" id="utClock">--:--:--</span></div>
+    <div><span class="lbl">Local Sidereal Time</span><span class="readout" id="lstClock">--:--:--</span></div>
+    <div><span class="lbl">Julian Date</span><span class="readout" id="jdClock" style="min-width:160px">-------.----</span></div>
+    <div><span class="lbl">Clock rate</span><span class="readout cyan" id="warpOut" style="min-width:130px">REAL TIME</span></div>
+    <div style="margin-left:auto"><span class="lbl">Site · 0.9 m Telescope · CCD UBVRI</span><span class="readout green" style="min-width:200px">KPNO-like · 31°57′N 111°36′W</span></div>
+  </div>
+
+  <div class="obs-grid">
+    <div id="obsTv">
+      <div class="tv-wrap">
+        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b>FINDER 2.5°</b> · red box = CCD field</div>
+      </div>
+      <div class="coord-row">
+        <div><span class="lbl">Right Ascension</span><span class="readout big" id="raOut">--:--:--.-</span></div>
+        <div><span class="lbl">Declination</span><span class="readout big" id="decOut">±--°--′--″</span></div>
+        <div style="margin-left:auto"><span class="lbl">Field</span><span class="readout" id="targOut" style="min-width:170px">—</span></div>
+      </div>
+      <div class="statusline" id="telStatus"></div>
+    </div>
+
+    <div class="panel" id="domePanel">
+      <h3>Dome &amp; Telescope</h3>
+      <div class="row spread">
+        <div class="dome-switch">
+          <div class="dome-led" id="domeLed"></div>
+          <span class="lbl" style="margin:0">Dome</span>
+        </div>
+        <button class="ctrl" id="domeBtn" onclick="toggleDome()">OPEN DOME</button>
+      </div>
+      <div class="row spread" style="margin-top:10px">
+        <span class="lbl" style="margin:0">Tracking</span>
+        <button class="ctrl" id="trackBtn" onclick="toggleTracking()">OFF</button>
+      </div>
+      <p class="hint" id="trackHint">With tracking off, the sky drifts west at the sidereal rate — watch the monitor.</p>
+    </div>
+
+    <div class="stack" id="obsSide">
+      <div class="panel">
+        <h3>Telescope Motion</h3>
+        <div class="nsew">
+          <button class="blank"></button><button class="ctrl" data-dir="N">N</button><button class="blank"></button>
+          <button class="ctrl" data-dir="E">E</button><button class="blank"></button><button class="ctrl" data-dir="W">W</button>
+          <button class="blank"></button><button class="ctrl" data-dir="S">S</button><button class="blank"></button>
+        </div>
+        <div class="row spread">
+          <span class="lbl" style="margin:0">Slew rate</span>
+          <select id="rateSel" aria-label="Slew rate">
+            <option value="1">1×</option><option value="2">2×</option><option value="4">4×</option>
+            <option value="8" selected>8×</option><option value="16">16×</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" id="coordBtn" onclick="promptCoords()" style="flex:1">Set coordinates…</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Target List · Transit Program</h3>
+        <select id="hotSel" style="width:100%" aria-label="Target list" onchange="refreshForecast()"></select>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" id="slewBtn" onclick="slewToTarget()" style="flex:1">Slew to target</button>
+        </div>
+        <div id="tgtInfo" class="hint" style="font-family:var(--mono)">—</div>
+      </div>
+
+      <div class="panel">
+        <h3>Transit Forecast · Ephemeris Service</h3>
+        <div id="fcBody" class="hint">Slew to a target to query tonight's prediction for that field.</div>
+        <div class="fc-times" id="fcTimes"></div>
+        <div class="row spread" id="fcRecRow" style="margin-top:8px;display:none">
+          <div><span class="lbl">Recommended length</span><span class="readout green small" id="fcRec">—</span></div>
+          <button class="ctrl" id="fcApply" onclick="applyRecommended()">Apply</button>
+        </div>
+        <p class="hint">Predictions are good to about ±10 minutes — part of tonight's job is measuring whether the
+          transit arrives on schedule. The recommended sequence length covers <b>baseline → ingress → egress →
+          baseline</b> starting from now (it shrinks as the transit approaches, so re-apply if you dawdle). A
+          shorter run risks a light curve you can't fit.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Saved Light Curves</h3>
+        <div id="savedList" class="hint" style="font-family:var(--mono)">Practice data set loaded — see the Fit tab.</div>
+      </div>
+    </div>
+
+    <div class="panel" id="camPanel">
+      <h3>CCD Camera · Differential Time-Series Photometry</h3>
+
+      <div class="cam-stats" style="margin-top:0;margin-bottom:10px">
+        <div><span class="lbl">Filter</span>
+          <div class="filter-btns">
+            <button class="ctrl" id="fU" onclick="setFilter('U')">U</button>
+            <button class="ctrl" id="fB" onclick="setFilter('B')">B</button>
+            <button class="ctrl on" id="fV" onclick="setFilter('V')">V</button>
+            <button class="ctrl" id="fR" onclick="setFilter('R')">R</button>
+            <button class="ctrl" id="fI" onclick="setFilter('I')">I</button>
+          </div>
+        </div>
+        <div><span class="lbl">Exposure (s)</span>
+          <select id="expSec" aria-label="Exposure seconds" onchange="expChanged()">
+            <option>5</option><option>10</option><option>20</option><option selected>30</option>
+            <option>45</option><option>60</option><option>90</option><option>120</option><option>180</option>
+          </select>
+        </div>
+        <div><span class="lbl"># Exposures</span>
+          <select id="expN" aria-label="Number of exposures" onchange="planChanged()">
+            <option>1</option><option>5</option><option selected>10</option>
+            <option>25</option><option>50</option><option>100</option>
+          </select>
+        </div>
+        <div><span class="lbl">Progress</span><span class="readout small" id="expProg" style="min-width:110px">idle</span></div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="ctrl" id="testBtn" onclick="takeTest()" disabled>Take test image</button>
+        </div>
+      </div>
+
+      <div class="cam-body">
+        <div class="cam-main">
+          <div class="tv-wrap">
+            <canvas id="camCanvas" width="720" height="600"></canvas>
+            <div class="tv-tag" id="camTag"><b>CAMERA</b> · no image</div>
+          </div>
+
+          <table class="aptable">
+            <thead><tr><th>Aperture</th><th>Star</th><th>Counts / exp</th><th>σ / exp (mmag)</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr id="rowT"><td>Target</td><td class="ap-none">—</td><td>—</td><td>—</td><td class="ap-none">unassigned</td></tr>
+              <tr id="rowC1"><td>Comp 1</td><td class="ap-none">—</td><td>—</td><td>—</td><td class="ap-none">unassigned</td></tr>
+              <tr id="rowC2"><td>Comp 2</td><td class="ap-none">—</td><td>—</td><td>—</td><td class="ap-none">unassigned</td></tr>
+            </tbody>
+          </table>
+
+          <div class="row" style="margin-top:10px">
+            <div class="pbar"><div class="pfill" id="pfill"></div></div>
+            <span class="warp-tag" id="seqTag">idle</span>
+          </div>
+          <canvas id="liveCanvas" width="720" height="190"></canvas>
+
+          <div class="statusline" id="camStatus">Open the dome, pick a target from the transit program, and slew to the field.</div>
+          <div class="warnline" id="camWarn"></div>
+          <p class="hint"><b>Label stars</b> marks the <b style="color:var(--amber)">◆ target</b>, the catalog's
+            suggested <b style="color:var(--cyan)">comp</b> stars, and known variables
+            (<b style="color:var(--red)">VAR</b>) to avoid; unmarked stars are uncharted. Turn the
+            <b>autoguider</b> on before starting — an hours-long run will drift without it. Full instructions are on
+            the <a href="#" onclick="showScreen('info');return false" style="color:var(--cyan)">Information</a> page.</p>
+        </div>
+
+        <div class="cam-left">
+          <div>
+            <span class="lbl">Assign aperture</span>
+            <div class="stack" style="gap:6px">
+              <button class="ctrl" id="asgT" onclick="setAssign('T')">Target</button>
+              <button class="ctrl cy" id="asgC1" onclick="setAssign('C1')">Comp 1</button>
+              <button class="ctrl cy" id="asgC2" onclick="setAssign('C2')">Comp 2</button>
+              <button class="ctrl" id="clrBtn" onclick="clearApertures()">Clear apertures</button>
+            </div>
+          </div>
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-dim);cursor:pointer">
+            <input type="checkbox" id="lblChk"> Label stars (target, comps, known variables)
+          </label>
+          <div class="row spread" style="margin-top:2px">
+            <span class="lbl" style="margin:0">Autoguider</span>
+            <button class="ctrl" id="guideBtn" onclick="toggleGuide()">OFF</button>
+          </div>
+          <div>
+            <span class="lbl">Sequence length (h)</span>
+            <input type="number" id="durBox" min="0" max="5" step="0.25" value="3.5" style="width:100%" onchange="planChanged()">
+            <p class="hint" style="margin-top:4px">Overrides <b>#&nbsp;Exposures</b> parameter above</p>
+          </div>
+          <div id="planHint" class="hint" style="margin-top:0">—</div>
+          <button class="ctrl on" id="seqBtn" onclick="startSequence()">▸ Start sequence</button>
+          <button class="ctrl" id="abortBtn" onclick="abortSequence()" disabled>■ Abort</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FIT THE TRANSIT ============ -->
+<section id="scr-fit" class="screen">
+  <div class="fit-grid">
+    <div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="row">
+          <select id="dsSel" style="flex:1;min-width:240px" onchange="loadDataset()" aria-label="Light curve data set"></select>
+          <div><span class="lbl">Points</span><span class="readout small" id="dsN" style="min-width:60px">--</span></div>
+          <div><span class="lbl">Filter · Exp</span><span class="readout small" id="dsExp" style="min-width:86px">--</span></div>
+          <button class="ctrl" onclick="exportCSV()">Export CSV</button>
+        </div>
+      </div>
+      <canvas id="lcCanvas" width="820" height="360"></canvas>
+      <canvas id="resCanvas" width="820" height="150"></canvas>
+      <p class="hint">Top: relative flux — target counts divided by the summed comparison-star counts, normalized to
+        the out-of-transit level. Bottom: residuals (data − model). A good fit leaves residuals that are pure scatter
+        around zero, with no dip or bump left behind.</p>
+    </div>
+
+    <div class="stack">
+      <div class="panel">
+        <h3>Transit Model · Trapezoid Fit</h3>
+        <div class="slider-row">
+          <span class="lbl">Mid-transit UT</span>
+          <input type="range" id="sMid" min="0" max="3" step="0.002" value="1.5" oninput="fitChanged()" aria-label="Mid-transit time">
+          <span class="readout small" id="oMid" style="min-width:80px">--:--</span>
+        </div>
+        <div class="slider-row">
+          <span class="lbl">Depth (%)</span>
+          <input type="range" id="sDep" min="0" max="4" step="0.005" value="1.0" oninput="fitChanged()" aria-label="Transit depth">
+          <input type="number" id="nDep" min="0" max="4" step="0.005" value="1.0" oninput="fitFromBox('sDep','nDep')">
+        </div>
+        <div class="slider-row">
+          <span class="lbl">Duration (h)</span>
+          <input type="range" id="sDur" min="0.3" max="5" step="0.01" value="2.0" oninput="fitChanged()" aria-label="Transit duration">
+          <input type="number" id="nDur" min="0.3" max="5" step="0.01" value="2.0" oninput="fitFromBox('sDur','nDur')">
+        </div>
+        <div class="slider-row">
+          <span class="lbl">Baseline</span>
+          <input type="range" id="sBas" min="0.99" max="1.01" step="0.0001" value="1.0" oninput="fitChanged()" aria-label="Baseline flux level">
+          <input type="number" id="nBas" min="0.99" max="1.01" step="0.0001" value="1.0000" oninput="fitFromBox('sBas','nBas')">
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div><span class="lbl">RMS residual (mmag)</span><span class="readout green" id="oRms">--</span></div>
+          <div><span class="lbl">Reduced χ²</span><span class="readout" id="oChi">--</span></div>
+          <button class="ctrl on" id="saveFitBtn" onclick="saveFit()" style="margin-left:auto">Save fit ➜ log</button>
+        </div>
+        <p class="hint">Grab the slider handle to drag it — clicking elsewhere on the track won't jump the value, so a
+          good fit is safe from stray clicks. The number boxes take typed values for fine control. Slide
+          <b>Mid-transit</b> and <b>Depth</b> first to get the dip roughly right, then tune <b>Duration</b> and the
+          <b>Baseline</b>. A good trapezoid fit has reduced χ² near 1. (The model's ingress and egress ramps are fixed
+          at 20% of the duration each.)</p>
+      </div>
+
+      <div class="panel">
+        <h3>Derived Planet Properties</h3>
+        <div class="eq">
+          <b>(A)</b> depth = (R<sub>p</sub> / R<sub>★</sub>)² &nbsp;⇒&nbsp; R<sub>p</sub>/R<sub>★</sub> = √depth<br>
+          <b>(B)</b> R<sub>p</sub> = (R<sub>p</sub>/R<sub>★</sub>) · R<sub>★</sub> &nbsp;·&nbsp; 1 R<sub>☉</sub> = 9.73 R<sub>Jup</sub>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><span class="lbl">Star radius R★ (R☉)</span><span class="readout cyan" id="oRs">--</span></div>
+          <div><span class="lbl">Rp / R★</span><span class="readout" id="oK">--</span></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div><span class="lbl">Planet radius</span><span class="readout green big" id="oRp" style="min-width:190px">-- R_Jup</span></div>
+        </div>
+        <p class="hint">R★ comes from the program catalog (spectroscopy plus the Gaia parallax — someone else's
+          careful work). When you're happy with the fit, look your planet up in the NASA Exoplanet Archive and compare
+          your radius, duration, and mid-transit time with the published values.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h3>Results Log · Saved Transit Fits</h3>
+    <div id="fitLogEmpty" class="hint">No fits saved yet. When your model matches the data, press
+      <b>Save fit ➜ log</b> — one row per light curve. Click a row to bring that data set and its saved fit back
+      into the window above; adjust and save again to update the row. Once your fits are logged, print the session
+      report below and attach it to your written work.</div>
+    <table class="aptable" id="fitLog" style="display:none">
+      <thead><tr><th>Planet</th><th>Light curve</th><th>Mid-transit UT</th><th>Depth (%)</th>
+        <th>Duration (h)</th><th>Rp / R★</th><th>Rp (R_Jup)</th><th>χ²ᵣ</th></tr></thead>
+      <tbody id="fitLogBody"></tbody>
+    </table>
+    <div class="row" style="margin-top:12px">
+      <button class="ctrl on" id="printBtn" onclick="printReport()" disabled> Download Results </button>
+      <span class="hint" id="printHint" style="margin:0">Save at least one fit to enable downloads.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INFORMATION ============ -->
+<section id="scr-info" class="screen">
+  <div class="info-body">
+    <h2>What this is</h2>
+    <p>This activity simulates <b>CCD time-series photometry of transiting exoplanets</b>: observing a known planet
+       host through a filter for several hours, measuring its brightness against comparison stars in the same field,
+       and fitting the resulting <b>light curve</b> to recover the transit's depth, duration, and mid-transit time —
+       and from the depth, the radius of the planet. It runs in any modern browser with no installation.</p>
+
+    <h2>The exercise, briefly</h2>
+    <p>1. Choose a target from the transit program, open the dome, and slew to it (tracking engages on arrival). The
+       <b>Ephemeris Service</b> then predicts tonight's ingress, mid-transit, and egress for that field, and
+       recommends a sequence length. 2. Take a <b>test image</b> and check the counts table: nothing may saturate,
+       and you want the smallest σ per exposure you can get — that usually means the longest exposure that stays
+       safely below the full well. Bright hosts force short exposures. 3. Turn on <b>Label stars</b> to identify the
+       target and the catalog's suggested comparison stars, then place three apertures: press <b>Target</b>,
+       <b>Comp 1</b>, or <b>Comp 2</b> and then click that star on the image (press the button again to place the
+       next one; <b>Clear apertures</b> starts over). Comparison stars near the target's brightness give the least
+       noise; stars marked <b>VAR</b> are known variables and will corrupt your light curve; unmarked stars are
+       uncharted. 4. Turn on the
+       <b>autoguider</b>, confirm the sequence length covers baseline on <i>both</i> sides of the transit, and start.
+       5. On the <b>Fit the Transit</b> page, slide the trapezoid model onto your data — mid-transit and depth first,
+       then duration and baseline — aiming for a reduced χ² near 1 and residuals that are pure scatter. Save each fit
+       to the results log, then compare your planet radius, duration, and mid-transit time with the published values
+       in the NASA Exoplanet Archive.</p>
+
+    <h2>The physics you are using</h2>
+    <p>A transit is an eclipse: the planet blocks the fraction of the star's disk that it covers, so the
+       <b>depth</b> of the light curve is the ratio of areas, depth = (R<sub>p</sub>/R<sub>★</sub>)². Measuring a
+       depth therefore measures a planet's size — but only relative to its star, which is why the stellar radius
+       R<sub>★</sub> (from spectroscopy plus the Gaia parallax — someone else's careful work) must be supplied from
+       the catalog before your fit becomes a radius in physical units. The <b>duration</b> and the shape of ingress
+       and egress carry information about the orbit's geometry, and the <b>mid-transit time</b> is what refines the
+       ephemeris: transits arriving early or late are how astronomers detect additional planets and other subtleties.
+       Nothing in the light curve gives the planet's mass — that requires radial velocities, a different measurement
+       entirely.</p>
+
+    <h2>What is and isn't physical</h2>
+    <p>The six program targets are <b>real transiting exoplanets</b>: their coordinates, magnitudes, colors, orbital
+       periods, transit depths, durations, and stellar radii follow published values (NASA Exoplanet Archive and the
+       discovery and follow-up literature) to within their uncertainties. What the simulation schedules is the
+       <b>clock time</b> of tonight's transit, so that every observing session has an event to catch; a real observer
+       would consult a transit prediction service the same way, but on nature's schedule rather than the classroom's.
+       The predicted mid-time is also deliberately imperfect by up to about ±10 minutes, so measuring when the
+       transit actually arrives is a real measurement rather than a lookup.</p>
+    <p><b>Photon counting</b> is genuinely Poisson: rates scale with stellar magnitude, filter, and exposure time, and
+       bright stars <b>saturate</b> the detector in long exposures — which is why the test image exists. Error bars
+       follow full propagation through the target <i>and</i> the comparison-star counts, so a faint comparison star
+       genuinely adds noise to every point, and the σ column in the aperture table shows this before you commit to
+       hours of observing. Some field stars are intrinsically <b>variable</b>: the catalog flags the known ones, and
+       the anonymous ones are a gamble — choosing comparison stars is part of the measurement, exactly as in real
+       transit follow-up. Differential photometry against those comparison stars removes most atmospheric variation;
+       what survives is scintillation (falling as √exposure), a slow systematic drift of a fraction of a millimagnitude,
+       and an irreducible floor. Each exposure carries an 8 s readout, and images taken with <b>tracking off</b> are
+       trailed and useless. Detector images are displayed in grayscale, as astronomical data really are; the finder TV
+       keeps its color view. <b>Time</b> uses real UT/JD/LST for a Kitt Peak–like site.</p>
+    <p><b>Time compression.</b> Transit photometry means staring at one field for hours, so during an observing
+       sequence the observatory clock — UT, LST, and JD together — runs at a uniform <b>15× rate</b>: about four real
+       minutes per simulated hour, capped at 5 simulated hours (about 20 real minutes) per run. The photometry is
+       computed per simulated second, so measured depths, durations, and mid-times are unaffected by the compression.
+       The sequence clock is anchored to the wall clock, so a run continues correctly if you switch browser tabs while
+       the photons accumulate. Horizon and airmass limits are deliberately not enforced, so any target can be observed
+       at any hour.</p>
+    <p>The main <b>simplification</b> is the transit shape itself. The model here is a trapezoid — flat baseline,
+       linear ingress, flat bottom, linear egress — and the fitting tool holds its ingress and egress ramps at 20% of
+       the duration. Real transits are rounded by <b>stellar limb darkening</b>, which also makes them slightly deeper
+       and rounder toward the blue; the depth here is treated as the same in every filter. The synthetic light curves
+       are generated with each planet's own ingress fraction, which is generally not 20%, so a perfect trapezoid fit
+       still leaves a small structured residual near ingress and egress and a reduced χ² somewhat above 1. This is
+       honest about the tool rather than the sky: a trapezoid is the standard first-pass model, and research-grade work
+       uses a limb-darkened model (Mandel &amp; Agol 2002) fitted by least squares or MCMC. Nothing in this simulation
+       is a source of research measurements.</p>
+
+    <h2>The session report</h2>
+    <p>The <b>Fit the Transit</b> page can print a report of your work (one page per saved fit, plus a summary
+       page) through your browser's own print dialog — choose <b>Save as PDF</b> as the destination to get a file
+       you can attach to your written submission. The button becomes available once you have saved at least one fit
+       to the results log.</p>
+    <p>Each report carries a short <b>session ID</b> and the <b>real-world UT</b> date and time at which the session
+       began and the report was printed. These identify one particular observing session. Note that these real-UT
+       stamps are <i>not</i> the same clock as the UT times reported for the observations themselves: those are the
+       simulation's own observatory clock, which schedules your transit and runs compressed during a sequence, so the
+       two are not expected to agree. Both appear on the report deliberately — the simulated times are the
+       astronomically meaningful ones for your measurements, while the real-UT stamps record when the work was done.
+       No personal information is collected, stored, or transmitted by this activity; the session ID is simply a
+       random label generated in your browser.</p>
+    <p>One further consequence of observing being a measurement rather than a lookup: the depth of each program
+       transit carries a small offset, fixed for your session and well inside the published uncertainty. Your fitted
+       planet radius should agree with the literature value, but your numbers are your own, from your own data.</p>
+
+    <h2>Credit &amp; lineage</h2>
+    <p>The aim of this project is to give students a realistic experience of controlling a telescope and
+       analyzing their own data, grounded in the working practices of professional astronomy. The workflow
+       here — pointing at a known host star, observing it for hours against comparison stars in the same field,
+       and fitting the light curve for depth, duration, and mid-transit time — is standard astronomical practice,
+       used essentially unchanged by the professional and amateur observers who follow up transiting planets today.</p>
+    <p>In bringing that practice into the classroom we gratefully acknowledge <b>Project CLEA</b>
+       (Contemporary Laboratory Experiences in Astronomy, Gettysburg College) and <b>VIREO — The Virtual
+       Educational Observatory</b> by Glenn Snyder and Laurence Marschall, whose exercises demonstrated
+       decades ago how effective simulated observing can be, and which we consulted while designing this
+       activity. This software was not produced by, and is not affiliated with or endorsed by, Project CLEA,
+       its authors, or Gettysburg College, and contains none of their code or data.</p>
+
+    <p>Pedagogical design, feature direction, and classroom testing: <b>Matthew Hankins, Arkansas Tech University</b>.
+       Software written collaboratively with <b>Claude</b> (Anthropic), under the instructor's direction.
+       Released under the MIT License.</p>
+  </div>
+</section>
+
+<footer>
+  Open Educational Observatory — Exoplanet Transit Photometry. MIT licensed.
+</footer>
+
+<script>
+"use strict";
+/* =====================================================================
+   OPEN EDUCATIONAL OBSERVATORY — Exoplanet Transits — v0.2 (demo)
+   telescope/finder/CCD mirrored from the cluster-photometry activity ·
+   sim clock w/ uniform 15× compression · differential aperture photometry ·
+   scripted observing sequences · trapezoid transit fitting
+   ===================================================================== */
+
+/* ---------------- time & site ---------------- */
+const SITE={lonDeg:-111.6,latDeg:31.96};
+function julianDate(d){return d.getTime()/86400000+2440587.5;}
+function lstHours(d){
+  const jd=julianDate(d),T=(jd-2451545.0)/36525.0;
+  let g=280.46061837+360.98564736629*(jd-2451545.0)+0.000387933*T*T;
+  g=((g%360)+360)%360; let l=g+SITE.lonDeg; l=((l%360)+360)%360; return l/15;
+}
+function fmtHMS(h,prec=1){
+  h=((h%24)+24)%24;
+  const H=Math.floor(h),m=(h-H)*60,M=Math.floor(m),s=(m-M)*60;
+  return String(H).padStart(2,"0")+":"+String(M).padStart(2,"0")+":"+s.toFixed(prec).padStart(prec?5:2,"0");
+}
+function fmtHM(h){
+  h=((h%24)+24)%24;
+  const H=Math.floor(h),M=Math.round((h-H)*60);
+  return String(H).padStart(2,"0")+":"+String(M%60).padStart(2,"0");
+}
+function fmtDMS(deg){
+  const sign=deg<0?"−":"+";deg=Math.abs(deg);
+  const D=Math.floor(deg),m=(deg-D)*60,M=Math.floor(m),S=Math.round((m-M)*60);
+  return sign+String(D).padStart(2,"0")+"°"+String(M).padStart(2,"0")+"′"+String(S).padStart(2,"0")+"″";
+}
+function parseRA(s){
+  const p=s.replace(/[hms:]/g," ").trim().split(/\s+/).map(Number);
+  if(p.some(isNaN)||!p.length)return null;
+  return (p[0]||0)+(p[1]||0)/60+(p[2]||0)/3600;
+}
+function parseDec(s){
+  const neg=/^\s*[-−]/.test(s);
+  const p=s.replace(/[°'"dms:−-]/g," ").trim().split(/\s+/).map(Number);
+  if(p.some(isNaN)||!p.length)return null;
+  const v=(p[0]||0)+(p[1]||0)/60+(p[2]||0)/3600;
+  return neg?-v:v;
+}
+
+/* simulation clock: real time plus an offset that grows during sequences */
+let simOffset=0;                 // seconds ahead of the wall clock
+const WARP=15;                   // uniform clock rate during a sequence
+function simNow(){return new Date(Date.now()+simOffset*1000);}
+function utHours(d){return d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600+d.getUTCMilliseconds()/3.6e6;}
+
+/* ---------------- RNG & math helpers ---------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296;};}
+function rnorm(rng){let u=0,v=0;while(!u)u=rng();while(!v)v=rng();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function interp(table,x){
+  if(x<=table[0][0])return table[0][1];
+  const n=table.length;
+  if(x>=table[n-1][0])return table[n-1][1];
+  for(let i=0;i<n-1;i++){
+    const[a,A]=table[i],[b,B]=table[i+1];
+    if(x>=a&&x<=b)return A+(B-A)*(x-a)/(b-a);
+  }
+  return table[n-1][1];
+}
+/* Johnson-Cousins dwarf colors vs (B-V) — as in the cluster activity */
+const UBREL=[[-0.33,-1.20],[-0.20,-0.66],[-0.10,-0.32],[0.00,0.00],[0.15,0.09],
+  [0.30,0.03],[0.45,-0.02],[0.60,0.13],[0.75,0.35],[0.90,0.62],[1.10,1.00],[1.30,1.18],[1.60,1.22]];
+function ubOf(c){return interp(UBREL,c);}
+const VRREL=[[-0.33,-0.14],[-0.10,-0.04],[0.00,0.00],[0.30,0.17],[0.60,0.35],
+  [0.90,0.50],[1.20,0.72],[1.45,0.95],[1.80,1.50]];
+function vrOf(c){return interp(VRREL,c);}
+const VIREL=[[-0.33,-0.34],[-0.10,-0.10],[0.00,0.00],[0.30,0.35],[0.60,0.70],
+  [0.90,1.00],[1.20,1.40],[1.45,1.90],[1.80,3.00]];
+function viOf(c){return interp(VIREL,c);}
+function starColor(bv){ // finder TV only — the CCD is grayscale
+  const t=Math.max(-0.35,Math.min(1.8,bv));
+  const f=(t+0.35)/2.15;
+  const r=Math.round(155+100*f), g=Math.round(180+40*(1-Math.abs(f-0.4)*2)), b=Math.round(255-140*f);
+  return "rgb("+r+","+Math.max(120,g)+","+b+")";
+}
+
+/* ---------------- program targets ----------------
+   Real transiting hot Jupiters. Coordinates, magnitudes, colors, periods,
+   depths, durations (T14), and stellar radii follow published values
+   (NASA Exoplanet Archive & literature), rounded for pedagogy. The
+   scheduled clock time of "tonight's" transit is the one simulated
+   quantity — disclosed in the footer.                                 */
+const RSUN_RJUP=9.731;
+/* ---------------- session identity ----------------
+   A short random label stamped onto the exported report. It is NOT a seed
+   and carries no personal information: its only job is to tie one PDF to
+   one observing session, so two reports claiming the same session (or two
+   sessions claiming identical measurements) are visible on inspection.
+   Crockford base32 alphabet — I, L, O and U are omitted so the code cannot
+   be misread as 1/0 when typed or read aloud.                          */
+const SESSION_ID=(function(){
+  const A="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  let s="";
+  const buf=(window.crypto&&window.crypto.getRandomValues)
+    ? window.crypto.getRandomValues(new Uint32Array(7))
+    : Array.from({length:7},()=>Math.floor(Math.random()*4294967296));
+  for(let i=0;i<7;i++)s+=A[buf[i]%32];
+  return s;
+})();
+const SESSION_START=new Date();     // real wall-clock UT the session began
+const sessionRng=mulberry32(Array.from(SESSION_ID).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,7));
+const TARGETS=[
+  {name:"HD 209458 b", host:"HD 209458", raH:22.0530, decDeg: 18.8842, V: 7.65, BV:0.58, P:3.52475, T14:3.07, depth:0.0147, Rs:1.20, sp:"G0 V"},
+  {name:"HD 189733 b", host:"HD 189733", raH:20.0121, decDeg: 22.7108, V: 7.67, BV:0.93, P:2.21857, T14:1.80, depth:0.0240, Rs:0.76, sp:"K1 V"},
+  {name:"HAT-P-32 b",  host:"HAT-P-32",  raH: 2.0695, decDeg: 46.6879, V:11.44, BV:0.53, P:2.15000, T14:3.11, depth:0.0228, Rs:1.22, sp:"F8 V"},
+  {name:"XO-2 N b",    host:"XO-2 N",    raH: 7.8018, decDeg: 50.2261, V:11.18, BV:0.82, P:2.61586, T14:2.68, depth:0.0105, Rs:0.98, sp:"K0 V"},
+  {name:"TrES-3 b",    host:"TrES-3",    raH:17.8686, decDeg: 37.5461, V:12.40, BV:0.71, P:1.30619, T14:1.37, depth:0.0266, Rs:0.81, sp:"G V"},
+  {name:"WASP-43 b",   host:"WASP-43",   raH:10.3272, decDeg: -9.8064, V:12.40, BV:1.32, P:0.81347, T14:1.16, depth:0.0254, Rs:0.67, sp:"K7 V"},
+];
+/* ingress/egress ramp of the TRUE lightcurve, as a fraction of T14 —
+   real values vary with impact parameter; the fit model fixes 0.20 */
+const TAU_TRUE={"HD 209458 b":0.14,"HD 189733 b":0.23,"HAT-P-32 b":0.14,
+  "XO-2 N b":0.11,"TrES-3 b":0.24,"WASP-43 b":0.21};
+const TAUFRAC_FIT=0.20;
+
+/* host + seeded comparison stars for each field (persistent objects) */
+const FIELD_STARS=[];
+TARGETS.forEach((t,i)=>{
+  /* Per-session depth: the published depth carries a small offset (~±1.5%,
+     well inside the literature uncertainty) fixed for this session. Every
+     student still recovers a value consistent with the published depth, but
+     not one that is digit-for-digit identical to anyone else's.        */
+  t.depthPub=t.depth;
+  t.depth=t.depth*(1+0.015*(2*sessionRng()-1));
+  t.hostStar={id:t.host,raDeg:t.raH*15,decDeg:t.decDeg,V:t.V,BV:t.BV,
+    UB:ubOf(t.BV),VR:vrOf(t.BV),VI:viOf(t.BV),kind:"host",tgt:t};
+  FIELD_STARS.push(t.hostStar);
+  const rng=mulberry32(910+i*77);
+  for(let k=0;k<8;k++){
+    const r=(1.8+4.4*rng())/60, ang=rng()*2*Math.PI;      // 1.8–6.2′ away: inside the CCD field
+    const dmag=(k<4)?(-0.2+1.2*rng()):(0.8+1.8*rng());    // 4 near the target's brightness, 4 fainter
+    const bv=-0.1+1.5*rng();
+    const s={id:t.host.replace(/[^A-Za-z0-9]/g,"")+"-C"+(k+1),cataloged:true,
+      raDeg:t.raH*15+r*Math.cos(ang)/Math.cos(t.decDeg*Math.PI/180),
+      decDeg:t.decDeg+r*Math.sin(ang),
+      V:t.V+dmag,BV:bv,UB:ubOf(bv),VR:vrOf(bv),VI:viOf(bv),kind:"star",varAmp:0};
+    if(k===2||k===3){                                      // known variables at tempting brightness
+      s.varAmp=0.02+0.04*rng();                            // 20–60 mmag semi-amplitude (δ Sct / W UMa-like)
+      s.varPer=1.0+1.5*rng(); s.varPh=rng()*10;            // 1–2.5 h: every run catches full cycles
+    }
+    FIELD_STARS.push(s);
+  }
+});
+
+/* ---------------- procedural background star field ---------------- */
+function hash3(a,b,c){let h=(a*374761393+b*668265263+c*2246822519)|0;
+  h=(h^(h>>>13))*1274126177;h=h^(h>>>16);return(h>>>0)/4294967296;}
+function fieldStarsInCell(cx,cy){
+  const n=Math.floor(hash3(cx,cy,1)*4);
+  const out=[];
+  for(let i=0;i<n;i++){
+    const ra=(cx+hash3(cx,cy,10+i))*0.2, dec=(cy+hash3(cx,cy,50+i))*0.2-90;
+    if(dec<-30||dec>89)continue;
+    const V=9.5+7*hash3(cx,cy,90+i);
+    const bv=-0.2+1.8*hash3(cx,cy,130+i);
+    const s={id:null,raDeg:ra,decDeg:dec,V:V,BV:bv,UB:ubOf(bv),VR:vrOf(bv),VI:viOf(bv),kind:"star",varAmp:0};
+    if(hash3(cx,cy,170+i)<0.22){                 // ~1 in 5 anonymous field stars is quietly variable
+      s.varAmp=0.006+0.03*hash3(cx,cy,210+i);
+      s.varPer=1.2+4*hash3(cx,cy,250+i); s.varPh=10*hash3(cx,cy,290+i);
+    }
+    out.push(s);
+  }
+  return out;
+}
+function starsNear(raDeg,decDeg,fovDeg){
+  const cosd=Math.cos(decDeg*Math.PI/180)||1e-6;
+  const half=fovDeg/2;
+  const out=[];
+  const cell=0.2;
+  const x0=Math.floor((raDeg-half/cosd)/cell), x1=Math.floor((raDeg+half/cosd)/cell);
+  const y0=Math.floor((decDeg+90-half)/cell), y1=Math.floor((decDeg+90+half)/cell);
+  for(let cx=x0;cx<=x1;cx++)for(let cy=y0;cy<=y1;cy++)
+    fieldStarsInCell(((cx%1800)+1800)%1800,cy).forEach(s=>out.push(s));
+  for(const s of FIELD_STARS)out.push(s);
+  return out.filter(s=>Math.abs(s.decDeg-decDeg)<half*1.25 &&
+    Math.abs(((s.raDeg-raDeg+540)%360)-180)*cosd<half*1.25);
+}
+
+/* ---------------- state & instrument constants ---------------- */
+const RATE={U:6.0e7,B:1.5e8,V:1.5e8,R:1.4e8,I:9.0e7}; // counts/sec at mag 0 (0.9 m + modern QE)
+const SKYCPS={U:7,B:21,V:36,R:50,I:63};               // sky counts/sec within the aperture
+const SAT_PER_EXP=2.0e6;                              // full-well: counts per single exposure per star
+const READ_S=8;                                       // readout + dead time per exposure, seconds
+const SCINT=0.0035;                                   // scintillation fraction at 1 s
+const SYSFLOOR=0.0004;                                // irreducible systematics floor
+const CAM_FOV=15/60;                                  // detector width: 15 arcmin, in degrees
+const FINDER_FOV=2.5;
+function magOf(s,f){
+  if(f==="V")return s.V;
+  if(f==="B")return s.V+s.BV;
+  if(f==="U")return s.V+s.BV+s.UB;
+  if(f==="R")return s.V-s.VR;
+  return s.V-s.VI; // I
+}
+function rateOf(s,f){return RATE[f]*Math.pow(10,-0.4*magOf(s,f));}
+function sigmaPerExp(s,f,sec){    // fractional 1σ per exposure for one star
+  const N=rateOf(s,f)*sec;
+  return Math.sqrt((N+SKYCPS[f]*sec)/Math.max(1,N*N)+Math.pow(SCINT/Math.sqrt(sec),2)+SYSFLOOR*SYSFLOOR);
+}
+
+const st={
+  dome:"closed", domeAnim:0,
+  tracking:false, guiding:false,
+  raDeg:0, decDeg:SITE.latDeg,
+  slew:null, moveDir:null,
+  filter:"V",
+  camMode:"blank",           // blank | test | seq
+  capturing:false, capT:0,
+  testImg:null,              // frozen photometric test frame
+  assignMode:null,
+  ap:{T:null,C1:null,C2:null},
+};
+
+/* ---------------- finder TV ---------------- */
+const tv=document.getElementById("tvCanvas"), tvx=tv.getContext("2d");
+const cam=document.getElementById("camCanvas"), cx2=cam.getContext("2d");
+function drawTV(){
+  const W=tv.width,H=tv.height;
+  tvx.fillStyle="#000";tvx.fillRect(0,0,W,H);
+  const domeOpen=st.domeAnim;
+  const transit=st.slew&&st.slew.phase==="transit";
+
+  if(domeOpen>0.02&&!transit){
+    const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+    const pxPerDeg=H/FINDER_FOV;
+    const stars=starsNear(st.raDeg,st.decDeg,FINDER_FOV*1.3);
+    for(const s of stars){
+      if(s.V>12.6)continue;
+      let dra=((s.raDeg-st.raDeg+540)%360)-180;
+      const x=W/2 - dra*cosd*pxPerDeg;
+      const y=H/2 - (s.decDeg-st.decDeg)*pxPerDeg;
+      if(x<-8||x>W+8||y<-8||y>H+8)continue;
+      const sz=Math.max(0.7,(12.6-s.V)*0.36);
+      tvx.beginPath();
+      tvx.fillStyle=starColor(s.BV);
+      tvx.shadowColor=tvx.fillStyle;tvx.shadowBlur=sz*2.4;
+      tvx.arc(x,y,sz,0,2*Math.PI);tvx.fill();
+      tvx.shadowBlur=0;
+    }
+    // CCD footprint (detector is 15′ × 12.5′)
+    const sw=CAM_FOV*pxPerDeg, sh=CAM_FOV*(cam.height/cam.width)*pxPerDeg;
+    tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1.4;
+    tvx.strokeRect(W/2-sw/2,H/2-sh/2,sw,sh);
+  }
+
+  if(transit){
+    tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
+    tvx.strokeStyle="rgba(111,211,224,.08)";
+    for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
+    tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
+    tvx.textAlign="left";
+  }
+
+  /* dome shutters slide apart from the center */
+  if(domeOpen<0.995){
+    const gap=(W/2)*domeOpen;
+    tvx.fillStyle="#11151d";
+    tvx.fillRect(0,0,W/2-gap,H); tvx.fillRect(W/2+gap,0,W/2-gap,H);
+    tvx.strokeStyle="#232d3e";tvx.lineWidth=2;
+    tvx.beginPath();tvx.moveTo(W/2-gap,0);tvx.lineTo(W/2-gap,H);
+    tvx.moveTo(W/2+gap,0);tvx.lineTo(W/2+gap,H);tvx.stroke();
+    tvx.fillStyle="#1b2330";
+    for(let y=20;y<H;y+=48){
+      if(W/2-gap>24)tvx.fillRect(18,y,4,4);
+      if(W/2-gap>24)tvx.fillRect(W/2-gap-24,y,4,4);
+      if(W/2+gap<W-24)tvx.fillRect(W/2+gap+20,y,4,4);
+      tvx.fillRect(W-24,y,4,4);
+    }
+    if(domeOpen<0.03){
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.fillText("DOME CLOSED",W/2,H/2);
+      tvx.font="12px 'IBM Plex Mono'";
+      tvx.fillText("open the dome to see the sky",W/2,H/2+22);
+      tvx.textAlign="left";
+    }
+  }
+}
+function nearestHostLabel(){
+  let best=null,bd=1e9;
+  for(const t of TARGETS){
+    const cosd=Math.cos(t.decDeg*Math.PI/180);
+    const dra=(((t.raH*15-st.raDeg+540)%360)-180)*cosd, dd=t.decDeg-st.decDeg;
+    const d=Math.sqrt(dra*dra+dd*dd);
+    if(d<bd){bd=d;best=t;}
+  }
+  return bd<1.5?best.host+" field":"—";
+}
+
+/* ---------------- dome / tracking / guiding ---------------- */
+const seq={running:false,points:[],warp:WARP};
+function setEnabled(){
+  const open=st.dome==="open"&&st.domeAnim>0.97, locked=!!st.slew||seq.running;
+  document.getElementById("testBtn").disabled=!open||st.capturing||locked;
+  document.getElementById("coordBtn").disabled=!open||locked;
+  document.getElementById("slewBtn").disabled=!open||locked;
+  document.getElementById("seqBtn").disabled=st.capturing||locked||!open;
+  document.querySelectorAll(".nsew button[data-dir]").forEach(b=>b.disabled=!open||locked);
+  ["asgT","asgC1","asgC2","clrBtn","domeBtn","trackBtn","guideBtn"].forEach(id=>
+    document.getElementById(id).disabled=seq.running);
+  document.getElementById("expSec").disabled=seq.running||st.capturing;
+  document.getElementById("expN").disabled=seq.running;
+  document.getElementById("durBox").disabled=seq.running;
+  document.getElementById("hotSel").disabled=seq.running;
+  document.querySelectorAll(".filter-btns button").forEach(b=>{
+    if(/^f[UBVRI]$/.test(b.id))b.disabled=seq.running||st.capturing;});
+  document.getElementById("abortBtn").disabled=!seq.running;
+  document.getElementById("warpOut").textContent=seq.running?("TIME ×"+WARP):"REAL TIME";
+  document.getElementById("warpOut").classList.toggle("red",seq.running);
+}
+function toggleDome(){
+  if(seq.running)return;
+  st.dome=st.dome==="open"?"closed":"open";
+  document.getElementById("domeBtn").textContent=st.dome==="open"?"CLOSE DOME":"OPEN DOME";
+}
+function toggleTracking(){
+  if(seq.running)return;
+  st.tracking=!st.tracking;
+  if(!st.tracking&&st.guiding)setGuiding(false);
+  const b=document.getElementById("trackBtn");
+  b.textContent=st.tracking?"ON":"OFF";
+  b.classList.toggle("on",st.tracking);
+  document.getElementById("trackHint").textContent=st.tracking
+    ?"Telescope is tracking at the sidereal rate."
+    :"With tracking off, the sky drifts west at the sidereal rate — watch the monitor.";
+}
+function setGuiding(on){
+  st.guiding=on;
+  const b=document.getElementById("guideBtn");
+  b.textContent=on?"ON":"OFF";
+  b.classList.toggle("on",on);
+}
+function toggleGuide(){
+  if(seq.running)return;
+  if(!st.guiding){
+    if(!st.tracking){status("camStatus","Turn tracking on first — the autoguider only trims the tracking, it can't replace it.");return;}
+    if(!st.ap.T){status("camStatus","Assign the Target aperture first — the autoguider locks onto the target star.");return;}
+    setGuiding(true);
+    status("camStatus","Autoguider locked on "+(st.ap.T.id||"the target star")+".");
+  }else setGuiding(false);
+}
+function status(id,msg){document.getElementById(id).textContent=msg;}
+function warn(id,msg){document.getElementById(id).textContent=msg;}
+function promptCoords(){
+  const ra=prompt("Right Ascension (h m s):",fmtHMS(st.raDeg/15,1));
+  if(ra===null)return;
+  const dec=prompt("Declination (° ′ ″):",fmtDMS(st.decDeg).replace(/[°′″]/g," "));
+  if(dec===null)return;
+  const rh=parseRA(ra),dd=parseDec(dec);
+  if(rh===null||dd===null||dd<-35||dd>89){status("telStatus","Coordinates not understood.");return;}
+  beginSlew(rh*15,dd,"coordinates");
+}
+
+/* ---------------- slewing (three-phase, as in the other activities) ---------------- */
+const slewErrCache={};
+function slewToTarget(){
+  const t=selTarget();
+  let err=slewErrCache[t.name];
+  if(!err){
+    const offDeg=0.011*Math.random();          // 0–40″ pointing error, cached per target
+    const ang=Math.random()*2*Math.PI;
+    err={dra:offDeg*Math.cos(ang)/Math.cos(t.decDeg*Math.PI/180),ddec:offDeg*Math.sin(ang)};
+    slewErrCache[t.name]=err;
+  }
+  t.pendingSchedule=true;
+  beginSlew(t.raH*15+err.dra,t.decDeg+err.ddec,t.host);
+}
+function beginSlew(raDeg,decDeg,name){
+  if(st.slew||seq.running)return;
+  const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+  let dRA=((raDeg-st.raDeg+540)%360)-180;
+  const dDec=decDeg-st.decDeg;
+  const dist=Math.hypot(dRA*cosd,dDec);
+  const dir={ra:Math.sign(dRA),dec:Math.sign(dDec)};
+  const off=0.30;
+  const settleStart={
+    ra:raDeg-(dir.ra||1)*off/Math.max(0.2,Math.cos(decDeg*Math.PI/180)),
+    dec:decDeg-(dir.dec||1)*off*0.6
+  };
+  st.slew={
+    phase:dist<0.8?"settle":"nudge",
+    t:0, targetName:name, target:{ra:raDeg,dec:decDeg},
+    dir, settleStart,
+    nudgeDur:1.1,
+    transitDur:Math.min(6,Math.max(2,dist*0.12)),
+    transFrom:null
+  };
+  // any test image from the old field is now stale
+  st.testImg=null;st.camMode="blank";clearApertures(true);
+  setEnabled();
+  status("telStatus","Slewing to "+name+" …");
+}
+function slewTick(dt){
+  const s=st.slew;if(!s)return;
+  s.t+=dt;
+  const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+  if(s.phase==="nudge"){
+    const rate=0.22;
+    st.raDeg=(st.raDeg+(s.dir.ra||0)*rate*dt/cosd+360)%360;
+    st.decDeg+=(s.dir.dec||0)*rate*dt*0.6;
+    if(s.t>=s.nudgeDur){s.phase="transit";s.t=0;s.transFrom={ra:st.raDeg,dec:st.decDeg};}
+  }else if(s.phase==="transit"){
+    const f=Math.min(1,s.t/s.transitDur);
+    const e=f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+    let dRA=((s.settleStart.ra-s.transFrom.ra+540)%360)-180;
+    st.raDeg=(s.transFrom.ra+dRA*e+360)%360;
+    st.decDeg=s.transFrom.dec+(s.settleStart.dec-s.transFrom.dec)*e;
+    if(f>=1){s.phase="settle";s.t=0;}
+  }else if(s.phase==="settle"){
+    const k=Math.min(1,dt*1.6);
+    let dRA=((s.target.ra-st.raDeg+540)%360)-180;
+    st.raDeg=(st.raDeg+dRA*k+360)%360;
+    st.decDeg+=(s.target.dec-st.decDeg)*k;
+    const d=Math.hypot(dRA*cosd,(s.target.dec-st.decDeg));
+    if(d<0.0006){
+      st.raDeg=s.target.ra;st.decDeg=s.target.dec;
+      st.slew=null;setEnabled();
+      if(!st.tracking)toggleTracking();
+      const t=selTarget();
+      if(t.pendingSchedule){
+        t.pendingSchedule=false;scheduleTransit(t);refreshForecast();
+        const rec=recommendH(t);
+        if(rec!==null&&!seq.running){document.getElementById("durBox").value=rec;planChanged();}
+      }
+      status("telStatus","Slew complete — take a test image to check the framing and the counts.");
+      status("camStatus","Take a test image: "+(t?t.host:"the target")+" should be the star nearest the crosshair.");
+    }
+  }
+}
+function moveTick(dt){
+  if(!st.moveDir||st.slew||st.dome!=="open"||seq.running)return;
+  const rate=(+document.getElementById("rateSel").value)*0.012;
+  const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+  if(st.moveDir==="N")st.decDeg=Math.min(89,st.decDeg+rate*dt);
+  if(st.moveDir==="S")st.decDeg=Math.max(-35,st.decDeg-rate*dt);
+  if(st.moveDir==="E")st.raDeg=(st.raDeg+rate*dt/cosd+360)%360;
+  if(st.moveDir==="W")st.raDeg=(st.raDeg-rate*dt/cosd+360)%360;
+}
+
+/* ---------------- target list & transit forecast ---------------- */
+function buildTargetUI(){
+  const sel=document.getElementById("hotSel");
+  sel.innerHTML="";
+  TARGETS.forEach((t,i)=>sel.add(new Option(t.name+"  ·  V="+t.V.toFixed(1),i)));
+  refreshForecast();
+}
+function selTarget(){return TARGETS[+document.getElementById("hotSel").value];}
+function refreshForecast(){
+  const t=selTarget();
+  document.getElementById("tgtInfo").innerHTML=
+    t.host+" · "+t.sp+" · V="+t.V.toFixed(2)+"<br>"+
+    fmtHMS(t.raH,0)+" "+fmtDMS(t.decDeg)+" · P="+t.P.toFixed(4)+" d";
+  const body=document.getElementById("fcBody"),times=document.getElementById("fcTimes");
+  const recRow=document.getElementById("fcRecRow");
+  if(!t.sched){
+    body.textContent="Slew to "+t.name+" to query tonight's prediction for that field.";
+    times.innerHTML="";recRow.style.display="none";planChanged();return;
+  }
+  const midH=t.sched.midUTh;
+  body.innerHTML="<b style='color:var(--text)'>"+t.name+"</b> transits tonight:";
+  times.innerHTML=
+    '<div><span class="lbl">Ingress</span><span class="readout cyan small" style="min-width:76px">'+fmtHM(midH-t.T14/2)+'</span></div>'+
+    '<div><span class="lbl">Mid</span><span class="readout small" style="min-width:76px">'+fmtHM(midH)+'</span></div>'+
+    '<div><span class="lbl">Egress</span><span class="readout cyan small" style="min-width:76px">'+fmtHM(midH+t.T14/2)+'</span></div>';
+  const rec=recommendH(t);
+  recRow.style.display="flex";
+  document.getElementById("fcRec").textContent=rec===null?"transit missed":(rec.toFixed(2)+" h");
+  document.getElementById("fcApply").disabled=(rec===null);
+  planChanged();
+}
+/* hours needed from *now* to cover egress plus post-egress baseline */
+function recommendH(t){
+  if(!t.sched)return null;
+  const toEgress=(t.sched.midJD-julianDate(simNow()))*24+t.T14/2;
+  if(toEgress<0.1)return null;                          // already over — reschedule by re-slewing
+  const need=toEgress+0.55;                             // baseline after egress + ephemeris margin
+  return Math.min(5,Math.ceil(need*4)/4);
+}
+function applyRecommended(){
+  const rec=recommendH(selTarget());
+  if(rec===null)return;
+  document.getElementById("durBox").value=rec;
+  planChanged();
+  status("camStatus","Sequence length set to "+rec.toFixed(2)+" h — enough to cover the full transit with baseline on both sides.");
+}
+/* schedule "tonight's" transit: an event a comfortable lead time ahead of
+   the current sim clock, so every session has one to catch. The true
+   mid-time differs from the forecast by up to ±10 min. */
+function scheduleTransit(t){
+  const nowJD=julianDate(simNow());
+  const stale=!t.sched || (t.sched.midJD + t.T14/2/24) < nowJD + 0.25/24;
+  if(!stale)return false;
+  const lead=0.5+0.5*t.T14+0.25*Math.random();             // hours from now
+  const midJD=nowJD+lead/24;
+  const err=(Math.random()-0.5)*0.28;                      // ephemeris error, ±~8 min
+  const d=simNow();
+  t.sched={midJD, trueMidJD:midJD+err/24,
+           midUTh:utHours(d)+lead};                        // decimal, may exceed 24 for display math
+  return true;
+}
+
+/* =====================================================================
+   CCD CAMERA
+   ===================================================================== */
+const CAM_PX_PER_ARCSEC=cam.width/(CAM_FOV*3600);
+function setFilter(f){
+  if(st.capturing||seq.running)return;
+  st.filter=f;
+  ["U","B","V","R","I"].forEach(x=>document.getElementById("f"+x).classList.toggle("on",x===f));
+  refreshApRows();
+  if(st.testImg&&st.testImg.filter!==f)
+    status("camStatus","Filter changed to "+f+" — take a new test image to verify the counts through this filter.");
+}
+function frameStars(ra0,dec0){ // stars on the detector, in arcsec offsets (+E,+N)
+  const cosd=Math.cos(dec0*Math.PI/180)||1e-6;
+  const out=[];
+  for(const s of starsNear(ra0,dec0,CAM_FOV*1.35)){
+    const dra=(((s.raDeg-ra0+540)%360)-180)*cosd*3600;
+    const dde=(s.decDeg-dec0)*3600;
+    if(Math.abs(dra)>CAM_FOV*3600/2+15)continue;
+    if(Math.abs(dde)>CAM_FOV*3600/2*(cam.height/cam.width)+15)continue;
+    out.push({ref:s,x:dra,y:dde});
+  }
+  return out;
+}
+function expChanged(){
+  refreshApRows();
+  planChanged();
+  if(st.testImg&&st.testImg.sec!==+document.getElementById("expSec").value)
+    status("camStatus","Exposure changed — take a new test image to verify counts before starting a sequence.");
+}
+function takeTest(){
+  if(st.domeAnim<0.98||st.capturing||st.slew||seq.running)return;
+  st.capturing=true;st.capT=0;
+  setEnabled();
+  status("camStatus","Test exposure: 1 × "+document.getElementById("expSec").value+" s through "+st.filter+"…");
+  warn("camWarn","");
+}
+function capTick(dt){
+  if(!st.capturing)return;
+  const sec=+document.getElementById("expSec").value;
+  st.capT+=dt*Math.max(1,sec>=10?sec/5:1);  // long exposures play accelerated (~5 s wall time)
+  document.getElementById("expProg").textContent="test · "+Math.min(st.capT,sec).toFixed(1)+" s";
+  if(st.capT>=sec)finishTest();
+}
+function finishTest(){
+  const sec=+document.getElementById("expSec").value;
+  const f=st.filter;
+  const trailed=!st.tracking;
+  const frame=[];
+  for(const fs of frameStars(st.raDeg,st.decDeg)){
+    const trueRate=rateOf(fs.ref,f);
+    frame.push({ref:fs.ref, x:fs.x, y:fs.y,
+      rate:trueRate*(1+randn()/Math.sqrt(Math.max(4,trueRate*sec))),
+      sat:(trueRate*sec)>SAT_PER_EXP});
+  }
+  st.testImg={filter:f,sec:sec,ra:st.raDeg,dec:st.decDeg,trailed:trailed,stars:frame};
+  st.camMode="test";
+  st.capturing=false;
+  setEnabled();
+  document.getElementById("expProg").textContent="done";
+  refreshApRows();
+  const t=selTarget();
+  const hostIn=frame.some(fs=>fs.ref===t.hostStar);
+  status("camStatus",trailed
+    ?"Test image read out — but tracking was OFF: stars are trailed. Turn tracking on and retake."
+    :(hostIn?"Test image read out. Place your apertures, then check the counts table for saturation and S/N."
+            :"Test image read out — the program target is not on the detector. Check your pointing."));
+  if(trailed)warn("camWarn","TRAILED IMAGE — unusable for photometry.");
+}
+
+/* ---------------- camera display (grayscale detector view) ---------------- */
+function drawCam(){
+  const W=cam.width,H=cam.height;
+  cx2.fillStyle="#05070b";cx2.fillRect(0,0,W,H);
+  const tag=document.getElementById("camTag");
+  if(st.domeAnim<0.98){
+    cx2.fillStyle="#3a4456";cx2.font="15px 'IBM Plex Mono'";cx2.textAlign="center";
+    cx2.fillText(st.dome==="open"?"DOME OPENING…":"DOME CLOSED",W/2,H/2);
+    cx2.textAlign="left";
+    tag.innerHTML="<b>CAMERA</b> · 15′ × 12.5′";
+    return;
+  }
+  if(st.slew){
+    cx2.fillStyle="#3a4456";cx2.font="14px 'IBM Plex Mono'";cx2.textAlign="center";
+    cx2.fillText("TELESCOPE IN MOTION — camera blanked",W/2,H/2);
+    cx2.textAlign="left";
+    tag.innerHTML="<b>CAMERA</b> · 15′ × 12.5′";
+    return;
+  }
+  if(st.capturing){
+    tag.innerHTML="<b>INTEGRATING</b> · shutter open";
+    cx2.fillStyle="#0e1118";cx2.fillRect(0,0,W,H);
+    cx2.fillStyle="#7d8aa0";cx2.font="14px 'IBM Plex Mono'";cx2.textAlign="center";
+    cx2.fillText("INTEGRATING — test exposure",W/2,H/2);
+    cx2.textAlign="left";
+    return;
+  }
+  if(st.camMode==="blank"){
+    cx2.fillStyle="#3a4456";cx2.font="13px 'IBM Plex Mono'";cx2.textAlign="center";
+    cx2.fillText("NO IMAGE — take a test image to check framing and counts",W/2,H/2);
+    cx2.textAlign="left";
+    tag.innerHTML="<b>CAMERA</b> · 15′ × 12.5′ · N up · E left";
+    return;
+  }
+  if(st.camMode==="seq"){
+    tag.innerHTML="<b>SEQUENCE</b> · "+st.filter+" · exp "+Math.min(seq.i+1,seq.N)+" / "+seq.N+" · N up · E left";
+    const live={filter:st.filter,sec:seq.exp,trailed:false,
+      stars:frameStars(st.raDeg,st.decDeg).map(fs=>({ref:fs.ref,x:fs.x,y:fs.y,
+        rate:rateOf(fs.ref,st.filter),sat:rateOf(fs.ref,st.filter)*seq.exp>SAT_PER_EXP}))};
+    drawDetectorStars(live);
+    drawLabels(live.stars);
+    drawApertures();
+    return;
+  }
+  // frozen test image
+  const im=st.testImg;
+  tag.innerHTML="<b>TEST IMAGE</b> · "+im.filter+" · 1×"+im.sec+" s · N up · E left";
+  const rB=mulberry32((im.sec*131+im.filter.charCodeAt(0))|0);
+  cx2.fillStyle="rgba(160,170,190,0.06)";
+  for(let i=0;i<420;i++){cx2.fillRect(rB()*W,rB()*H,1,1);}
+  drawDetectorStars(im);
+  drawLabels(im.stars);
+  drawApertures();
+}
+function drawDetectorStars(im){
+  const W=cam.width,H=cam.height,pxA=CAM_PX_PER_ARCSEC;
+  const maxSz=14;
+  for(const fs of im.stars){
+    const s=fs.ref;
+    const x=W/2-fs.x*pxA, y=H/2-fs.y*pxA;
+    if(x<-14||x>W+14||y<-14||y>H+14)continue;
+    if(im.trailed){
+      if(s.V>17)continue;
+      cx2.strokeStyle="#c9d2e2";cx2.lineWidth=1;
+      cx2.beginPath();cx2.moveTo(x-9,y);cx2.lineTo(x+9,y);cx2.stroke();
+      continue;
+    }
+    const cts=fs.rate*im.sec;
+    const nsig=cts/Math.sqrt(Math.max(1,SKYCPS[im.filter]*im.sec));
+    if(nsig<4)continue;
+    const sz=Math.min(maxSz,1.1+1.15*Math.log10(Math.max(1,nsig/4)));
+    if(fs.sat){ // saturated: bloomed core + bleed column
+      cx2.fillStyle="#fff";
+      cx2.shadowColor="#fff";cx2.shadowBlur=10;
+      cx2.beginPath();cx2.arc(x,y,Math.min(maxSz,sz+2.5),0,2*Math.PI);cx2.fill();
+      cx2.shadowBlur=0;
+      cx2.fillRect(x-0.8,Math.max(0,y-34),1.6,68);
+    }else{
+      cx2.fillStyle="#dde4ef";   // grayscale detector view
+      cx2.shadowColor="#dde4ef";cx2.shadowBlur=sz*1.8;
+      cx2.beginPath();cx2.arc(x,y,sz,0,2*Math.PI);cx2.fill();
+      cx2.shadowBlur=0;
+    }
+  }
+}
+/* star labels: the target, catalog-suggested comparison stars near the
+   target's brightness, and catalog-flagged variables to avoid */
+function drawLabels(stars){
+  if(!document.getElementById("lblChk").checked)return;
+  const t=selTarget(),pxA=CAM_PX_PER_ARCSEC,W=cam.width,H=cam.height;
+  cx2.font="11px 'IBM Plex Mono'";cx2.textAlign="left";
+  for(const fs of stars){
+    const s=fs.ref;
+    const x=W/2-fs.x*pxA, y=H/2-fs.y*pxA;
+    if(x<0||x>W||y<0||y>H)continue;
+    if(s===t.hostStar){
+      cx2.fillStyle="#ffb454";cx2.fillText("◆ "+t.host+" (target)",x+9,y-8);
+    }else if(s.cataloged&&s.varAmp>0){
+      cx2.fillStyle="#e4573d";cx2.fillText("VAR",x+9,y-8);
+    }else if(s.cataloged&&s.varAmp===0&&s.V-t.V>=-0.5&&s.V-t.V<=1.5){
+      cx2.fillStyle="#6fd3e0";cx2.fillText("comp",x+9,y-8);
+    }
+  }
+}
+function apPx(s){
+  const cosd=Math.cos(st.decDeg*Math.PI/180)||1e-6;
+  const dra=(((s.raDeg-st.raDeg+540)%360)-180)*cosd*3600;
+  const dde=(s.decDeg-st.decDeg)*3600;
+  return{x:cam.width/2-dra*CAM_PX_PER_ARCSEC, y:cam.height/2-dde*CAM_PX_PER_ARCSEC};
+}
+function drawApertures(){
+  for(const[key,color,label]of[["T","#ffb454","T"],["C1","#6fd3e0","C1"],["C2","#6fd3e0","C2"]]){
+    const s=st.ap[key];if(!s)continue;
+    const p=apPx(s);
+    cx2.strokeStyle=color;cx2.lineWidth=1.5;
+    cx2.beginPath();cx2.arc(p.x,p.y,16,0,2*Math.PI);cx2.stroke();
+    cx2.fillStyle=color;cx2.font="11px 'IBM Plex Mono'";
+    cx2.fillText(label,p.x+18,p.y-11);
+  }
+}
+
+/* ---------------- aperture assignment ---------------- */
+function labelOf(w){return w==="T"?"Target":w==="C1"?"Comp 1":"Comp 2";}
+function setAssign(which){
+  if(seq.running)return;
+  st.assignMode=st.assignMode===which?null:which;
+  for(const[w,id]of[["T","asgT"],["C1","asgC1"],["C2","asgC2"]])
+    document.getElementById(id).classList.toggle("on",st.assignMode===w);
+  if(st.assignMode)status("camStatus",st.camMode==="test"
+    ?"Click a star on the test image to place the "+labelOf(st.assignMode)+" aperture."
+    :"Take a test image first so you can see what you're placing apertures on.");
+}
+function clearApertures(silent){
+  st.ap.T=st.ap.C1=st.ap.C2=null;st.assignMode=null;
+  if(st.guiding)setGuiding(false);
+  ["asgT","asgC1","asgC2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  refreshApRows();
+  if(silent!==true)status("camStatus","Apertures cleared.");
+}
+cam.addEventListener("click",e=>{
+  if(!st.assignMode||st.camMode!=="test"||st.capturing||seq.running)return;
+  if(st.testImg&&st.testImg.trailed){status("camStatus","This image is trailed — retake it with tracking on before placing apertures.");return;}
+  const r=cam.getBoundingClientRect();
+  const px=(e.clientX-r.left)*cam.width/r.width, py=(e.clientY-r.top)*cam.height/r.height;
+  let best=null,bd=1e9;
+  for(const fs of st.testImg.stars){
+    const p=apPx(fs.ref);
+    const d=Math.hypot(p.x-px,p.y-py);
+    if(d<bd){bd=d;best=fs.ref;}
+  }
+  if(!best||bd>20){status("camStatus","No star there — click closer to a star image.");return;}
+  for(const k of["T","C1","C2"])if(k!==st.assignMode&&st.ap[k]===best)st.ap[k]=null;
+  st.ap[st.assignMode]=best;
+  if(st.assignMode!=="T"&&best.kind==="host")
+    warn("camWarn","That comparison star is the transit target itself — it will not be constant!");
+  const who=st.assignMode;st.assignMode=null;
+  ["asgT","asgC1","asgC2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  refreshApRows();
+  status("camStatus",labelOf(who)+" aperture placed on "+(best.id||("star V="+best.V.toFixed(1)))+".");
+  planChanged();
+});
+function refreshApRows(){["T","C1","C2"].forEach(refreshApRow);}
+function refreshApRow(which){
+  const row=document.getElementById(which==="T"?"rowT":which==="C1"?"rowC1":"rowC2");
+  const tds=row.getElementsByTagName("td");
+  const s=st.ap[which];
+  if(!s){tds[1].textContent="—";tds[1].className="ap-none";
+    tds[2].textContent=tds[3].textContent="—";
+    tds[4].textContent="unassigned";tds[4].className="ap-none";return;}
+  tds[1].textContent=s.id||("V="+s.V.toFixed(1));tds[1].className="";
+  const im=st.testImg,sec=+document.getElementById("expSec").value;
+  const fresh=im&&!im.trailed&&im.filter===st.filter&&im.sec===sec;
+  if(!fresh){tds[2].textContent=tds[3].textContent="—";
+    tds[4].textContent="needs test image";tds[4].className="ap-low";return;}
+  const N=rateOf(s,st.filter)*sec;
+  const sig=sigmaPerExp(s,st.filter,sec)*1085.7;
+  tds[2].textContent=N>=1e6?(N/1e6).toFixed(2)+"M":Math.round(N).toLocaleString();
+  tds[3].textContent=sig.toFixed(2);
+  if(N>SAT_PER_EXP){tds[4].textContent="SATURATED";tds[4].className="ap-sat";}
+  else if(s.cataloged&&s.varAmp>0){tds[4].textContent="KNOWN VARIABLE";tds[4].className="ap-sat";}
+  else if(N>0.75*SAT_PER_EXP){tds[4].textContent="near full well";tds[4].className="ap-low";}
+  else if(sig>6){tds[4].textContent="low S/N";tds[4].className="ap-low";}
+  else{tds[4].textContent="OK";tds[4].className="ap-ok";}
+}
+
+/* ---------------- observing sequence ---------------- */
+function plannedSeq(){
+  const sec=+document.getElementById("expSec").value;
+  const cad=sec+READ_S;
+  let durH=+document.getElementById("durBox").value;
+  if(!isFinite(durH)||durH<0)durH=0;
+  durH=Math.min(5,Math.round(durH*4)/4);
+  document.getElementById("durBox").value=durH;
+  let n,simH;
+  if(durH>0){n=Math.max(1,Math.floor(durH*3600/cad));simH=durH;}
+  else{n=+document.getElementById("expN").value;simH=n*cad/3600;}
+  return{sec,cad,n,simH,override:durH>0};
+}
+function planChanged(){
+  const p=plannedSeq();
+  const d=simNow(),endUT=utHours(d)+p.simH;
+  document.getElementById("planHint").innerHTML=
+    "Planned: <b>"+p.n+"</b> × "+p.sec+" s (+"+READ_S+" s readout) "+
+    (p.override?"from the sequence length":"from <b># Exposures</b>")+
+    " · ends near <b>"+fmtHM(endUT)+" UT</b> · about <b>"+
+    (p.simH*60/WARP).toFixed(p.simH*60/WARP<10?1:0)+" real min</b> at "+WARP+"×.";
+}
+function startSequence(){
+  if(seq.running||st.capturing)return;
+  const t=selTarget();
+  if(st.domeAnim<0.98)return status("camStatus","The dome is closed. Open it first.");
+  if(st.slew)return status("camStatus","Telescope is slewing — wait for it to settle.");
+  if(!st.tracking)return status("camStatus","Turn tracking on — an hours-long series without tracking is a smear.");
+  if(!st.ap.T||!st.ap.C1||!st.ap.C2)return status("camStatus","Place all three apertures (Target + 2 comparison stars) first.");
+  const p=plannedSeq();
+  const im=st.testImg;
+  if(!im||im.trailed||im.filter!==st.filter||im.sec!==p.sec)
+    return status("camStatus","Take a test image at this filter and exposure first — verify nothing saturates before committing to hours of data.");
+  if(!st.guiding)return status("camStatus","Turn the autoguider on — small drifts over hours would move stars out of their apertures.");
+  for(const k of["T","C1","C2"]){
+    if(rateOf(st.ap[k],st.filter)*p.sec>SAT_PER_EXP)
+      return status("camStatus",labelOf(k)+" star saturates in "+p.sec+" s through "+st.filter+" — shorten the exposure. Saturated pixels destroy photometry.");
+  }
+  if(p.simH>5.01)return status("camStatus","Sequence too long — the scheduler caps runs at 5 simulated hours (about 20 real minutes).");
+  if(st.ap.T!==t.hostStar&&!confirm("Your Target aperture is not on "+t.host+" (the program target). Continue anyway?"))return;
+  if(!t.sched)scheduleTransit(t);
+  /* coverage check: will this run capture baseline → ingress → egress → baseline? */
+  if(st.ap.T===t.hostStar&&t.sched){
+    const nowJD=julianDate(simNow());
+    const endJD=nowJD+p.simH/24;
+    const ingJD=t.sched.midJD-t.T14/2/24, egrJD=t.sched.midJD+t.T14/2/24;
+    let prob=null;
+    if(egrJD<nowJD)prob="tonight's transit of "+t.name+" is already over — re-slew to the target to schedule the next event";
+    else if(endJD<egrJD+0.3/24)prob="this sequence ends before egress + baseline (recommended: "+
+      (recommendH(t)===null?"—":recommendH(t).toFixed(2)+" h")+")";
+    else if(nowJD>ingJD-0.2/24)prob="ingress is too close — there won't be enough pre-transit baseline";
+    if(prob&&!confirm("Coverage warning: "+prob+".\n\nStart anyway, at your own risk?"))return;
+  }
+  for(const k of["C1","C2"]){
+    const s=st.ap[k];
+    if(s.cataloged&&s.varAmp>0&&!confirm(labelOf(k)+" is a catalog-flagged VARIABLE star — its own brightness changes "+
+      "will imprint on your light curve. Use it anyway?"))return;
+  }
+  const d=simNow();
+  seq.running=true;
+  seq.target=t; seq.exp=p.sec; seq.cad=p.cad; seq.filter=st.filter;
+  seq.simH=p.simH; seq.N=p.n;
+  seq.i=0; seq.simElapsed=0; seq.points=[];
+  seq.startWall=Date.now(); seq.baseOffset=simOffset;   // wall-clock anchored: runs on in background tabs
+  seq.apC1=st.ap.C1; seq.apC2=st.ap.C2;                 // recorded for the printable report
+  seq.durWallMs=p.n*p.cad*1000/WARP;
+  seq.startJD=julianDate(d); seq.startUTh=utHours(d);
+  seq.trueMidH=(t.sched.trueMidJD-seq.startJD)*24;   // hours since sequence start
+  seq.sysAmp=0.0006+0.0004*Math.random();
+  seq.sysPer=3+3*Math.random(); seq.sysPh=Math.random()*seq.sysPer;
+  seq.onTarget=(st.ap.T===t.hostStar);
+  st.camMode="seq";
+  warn("camWarn","");
+  setEnabled();
+  drawLive();
+  status("camStatus","Sequence running on "+t.host+" through "+seq.filter+
+    " — the observatory clock is compressed "+WARP+"×. Watch the light curve come in.");
+}
+function trapModel(tH,midH,T14,tauH,depth){
+  const dt=Math.abs(tH-midH),half=T14/2;
+  if(dt>=half)return 1;
+  const flat=Math.max(0,half-tauH);
+  if(dt<=flat)return 1-depth;
+  return 1-depth*(half-dt)/tauH;
+}
+function makePoint(i){
+  const tH=(i+0.5)*seq.cad/3600;                       // hours since sequence start
+  const t=seq.target,f=seq.filter;
+  const model=seq.onTarget
+    ?trapModel(tH,seq.trueMidH,t.T14,TAU_TRUE[t.name]*t.T14,t.depth):1;
+  const varF=s=>s.varAmp?1+s.varAmp*Math.sin(2*Math.PI*(tH+s.varPh)/s.varPer):1;
+  const NT=rateOf(st.ap.T,f)*seq.exp*model*varF(st.ap.T);
+  const NC=(rateOf(st.ap.C1,f)*varF(st.ap.C1)+rateOf(st.ap.C2,f)*varF(st.ap.C2))*seq.exp;
+  const nT=Math.max(1,NT+randn()*Math.sqrt(NT+SKYCPS[f]*seq.exp));
+  const nC=Math.max(1,NC+randn()*Math.sqrt(NC+2*SKYCPS[f]*seq.exp));
+  const scint=(SCINT/Math.sqrt(seq.exp))*0.55;         // differential residual
+  const sys=seq.sysAmp*Math.sin(2*Math.PI*(tH+seq.sysPh)/seq.sysPer);
+  const rel=(nT/nC)*(1+scint*randn())*(1+sys);
+  const err=Math.sqrt((NT+SKYCPS[f]*seq.exp)/(NT*NT)+(NC+2*SKYCPS[f]*seq.exp)/(NC*NC)+scint*scint+SYSFLOOR*SYSFLOOR);
+  return{t:tH,rel,err};
+}
+/* the sequence clock is anchored to the wall clock, not to animation
+   frames — if the student switches browser tabs, requestAnimationFrame
+   pauses but the integration keeps "running": on the next pump (interval
+   timer, tab return, or next frame) the elapsed time is recomputed from
+   Date.now() and all exposures taken in the meantime are filled in.   */
+function seqPump(){
+  if(!seq.running)return;
+  const w=Math.min(Date.now()-seq.startWall,seq.durWallMs);
+  simOffset=seq.baseOffset+w*(WARP-1)/1000;
+  seq.simElapsed=w*WARP/1000;
+  let made=false;
+  while(seq.i<seq.N&&(seq.i+1)*seq.cad<=seq.simElapsed){
+    seq.points.push(makePoint(seq.i));seq.i++;made=true;
+  }
+  const frac=Math.min(1,seq.simElapsed/(seq.N*seq.cad));
+  document.getElementById("pfill").style.width=(frac*100).toFixed(1)+"%";
+  const d=simNow();
+  document.getElementById("seqTag").textContent=
+    "exposure "+Math.min(seq.i+1,seq.N)+" / "+seq.N+" · UT "+fmtHM(utHours(d))+" · time ×"+WARP;
+  document.getElementById("expProg").textContent="exp "+Math.min(seq.i+1,seq.N)+"/"+seq.N;
+  if(made)drawLive();
+  if(seq.i>=seq.N||w>=seq.durWallMs)finishSequence(false);
+}
+function abortSequence(){if(seq.running){seqPump();if(seq.running)finishSequence(true);}}
+function finishSequence(aborted){
+  seq.running=false;
+  st.camMode=st.testImg?"test":"blank";
+  setEnabled();
+  document.getElementById("seqTag").textContent="idle";
+  document.getElementById("expProg").textContent="idle";
+  document.getElementById("pfill").style.width="0%";
+  if(seq.points.length<10){status("camStatus","Sequence aborted — too few points to keep.");return;}
+  const label=seq.target.name+" · "+fmtHM(seq.startUTh)+" UT · "+seq.filter+" "+seq.exp+" s"+(aborted?" (aborted)":"");
+  const nm=s=>s.id||("V="+s.V.toFixed(2));
+  saveDataset({
+    label, target:seq.target, startUTh:seq.startUTh, durH:seq.simH, exp:seq.exp, filter:seq.filter,
+    comps:{c1:nm(seq.apC1), c2:nm(seq.apC2)},
+    points:normalizePoints(seq.points),
+  });
+  status("camStatus",(aborted?"Sequence aborted — ":"Sequence complete — ")+seq.points.length+
+    " exposures saved as a light curve. Open the Fit the Transit tab.");
+}
+/* normalize to the out-of-transit level: median of the upper half of fluxes */
+function normalizePoints(pts){
+  const v=pts.map(p=>p.rel).sort((a,b)=>a-b);
+  const upper=v.slice(Math.floor(v.length/2));
+  const base=upper[Math.floor(upper.length/2)]||1;
+  return pts.map(p=>({t:p.t,rel:p.rel/base,err:p.err}));
+}
+
+/* live light-curve strip */
+const lc=document.getElementById("liveCanvas"),lcx=lc.getContext("2d");
+function drawLive(){
+  lcx.fillStyle="#0d1420";lcx.fillRect(0,0,lc.width,lc.height);
+  lcx.strokeStyle="#2a3546";lcx.strokeRect(0,0,lc.width,lc.height);
+  const pts=seq.points;
+  lcx.fillStyle="#7d8aa0";lcx.font="11px 'IBM Plex Mono'";
+  if(!seq.running&&!pts.length){lcx.fillText("relative flux — waiting for a sequence",10,18);return;}
+  if(!pts.length){lcx.fillText("relative flux — waiting for the first exposures",10,18);return;}
+  const durH=seq.simH;
+  let lo=Infinity,hi=-Infinity;
+  for(const p of pts){lo=Math.min(lo,p.rel);hi=Math.max(hi,p.rel);}
+  const med=pts.map(p=>p.rel).sort((a,b)=>a-b)[Math.floor(pts.length/2)];
+  lo=Math.min(lo,med*0.995);hi=Math.max(hi,med*1.004);
+  const pad=0.15*(hi-lo);lo-=pad;hi+=pad;
+  const X=t=>8+(t/durH)*(lc.width-16), Y=v=>lc.height-14-((v-lo)/(hi-lo))*(lc.height-30);
+  lcx.fillStyle="#7ee29a";
+  for(const p of pts){lcx.fillRect(X(p.t)-1,Y(p.rel)-1,2.4,2.4);}
+  lcx.fillStyle="#7d8aa0";
+  lcx.fillText("relative flux (target / comps) · "+pts.length+" points",10,14);
+  lcx.fillText("UT "+fmtHM(seq.startUTh),8,lc.height-3);
+  const endTxt="UT "+fmtHM(seq.startUTh+durH);
+  lcx.fillText(endTxt,lc.width-8-lcx.measureText(endTxt).width,lc.height-3);
+}
+
+/* =====================================================================
+   FIT THE TRANSIT
+   ===================================================================== */
+const datasets=[];
+function saveDataset(ds){
+  ds.fit={mid:ds.durH/2,depPct:1.0,dur:Math.min(2,ds.durH*0.6),base:1.0};
+  datasets.push(ds);
+  refreshSavedUI();refreshDsSel();
+  document.getElementById("dsSel").value=String(datasets.length-1);
+  loadDataset();
+}
+function refreshSavedUI(){
+  const el=document.getElementById("savedList");
+  el.innerHTML=datasets.map(d=>"★ "+d.label).join("<br>")||"None yet.";
+}
+function refreshDsSel(){
+  const sel=document.getElementById("dsSel");
+  const prev=sel.value;
+  sel.innerHTML="";
+  datasets.forEach((d,i)=>sel.add(new Option((d.practice?"":"★ ")+d.label,i)));
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+let cur=null;
+function loadDataset(){
+  cur=datasets[+document.getElementById("dsSel").value]||null;
+  if(!cur)return;
+  document.getElementById("dsN").textContent=cur.points.length;
+  document.getElementById("dsExp").textContent=cur.filter+" · "+cur.exp+" s";
+  document.getElementById("oRs").textContent=cur.target.Rs.toFixed(2);
+  const sMid=document.getElementById("sMid");
+  sMid.min=0;sMid.max=cur.durH;sMid.value=cur.fit.mid;
+  document.getElementById("sDep").value=document.getElementById("nDep").value=cur.fit.depPct;
+  document.getElementById("sDur").value=document.getElementById("nDur").value=cur.fit.dur;
+  document.getElementById("sBas").value=document.getElementById("nBas").value=cur.fit.base;
+  fitChanged();
+  rebuildFitLog();
+}
+function fitFromBox(sid,nid){
+  document.getElementById(sid).value=document.getElementById(nid).value;
+  fitChanged();
+}
+function fitChanged(){
+  if(!cur)return;
+  const f=cur.fit;
+  f.mid=+document.getElementById("sMid").value;
+  f.depPct=+document.getElementById("sDep").value;
+  f.dur=+document.getElementById("sDur").value;
+  f.base=+document.getElementById("sBas").value;
+  document.getElementById("nDep").value=f.depPct;
+  document.getElementById("nDur").value=f.dur;
+  document.getElementById("nBas").value=f.base;
+  document.getElementById("oMid").textContent=fmtHM(cur.startUTh+f.mid);
+  const model=t=>f.base*trapModel(t,f.mid,f.dur,TAUFRAC_FIT*f.dur,f.depPct/100);
+  /* stats */
+  let ss=0,chi=0;
+  for(const p of cur.points){
+    const r=p.rel-model(p.t);ss+=r*r;chi+=(r/p.err)*(r/p.err);
+  }
+  const n=cur.points.length;
+  const rms=Math.sqrt(ss/n)*1085.7;
+  document.getElementById("oRms").textContent=rms.toFixed(2);
+  document.getElementById("oChi").textContent=(chi/Math.max(1,n-4)).toFixed(2);
+  /* derived */
+  const k=Math.sqrt(f.depPct/100);
+  document.getElementById("oK").textContent=k.toFixed(4);
+  document.getElementById("oRp").textContent=(k*cur.target.Rs*RSUN_RJUP).toFixed(2)+" R_Jup";
+  drawFit(model);
+}
+const fc=document.getElementById("lcCanvas"),fcx=fc.getContext("2d");
+const rc=document.getElementById("resCanvas"),rcx=rc.getContext("2d");
+const AXL=56,AXB=26,AXT=10,AXR=10;
+function drawAxesBox(ctx,w,h){
+  ctx.fillStyle="#0d1420";ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle="#2a3546";ctx.strokeRect(AXL,AXT,w-AXL-AXR,h-AXT-AXB);
+}
+function drawFit(model){
+  const pts=cur.points,durH=cur.durH;
+  let lo=Infinity,hi=-Infinity;
+  for(const p of pts){lo=Math.min(lo,p.rel);hi=Math.max(hi,p.rel);}
+  const pad=0.18*(hi-lo)+1e-4;lo-=pad;hi+=pad;
+  const W=fc.width,H=fc.height;
+  drawAxesBox(fcx,W,H);
+  const X=t=>AXL+(t/durH)*(W-AXL-AXR), Y=v=>H-AXB-((v-lo)/(hi-lo))*(H-AXT-AXB);
+  /* x ticks in UT */
+  fcx.fillStyle="#7d8aa0";fcx.font="11px 'IBM Plex Mono'";fcx.strokeStyle="#1b2330";
+  const tickEvery=durH>4?1:0.5;
+  for(let t=0;t<=durH+1e-9;t+=tickEvery){
+    const x=X(t);
+    fcx.beginPath();fcx.moveTo(x,AXT);fcx.lineTo(x,H-AXB);fcx.stroke();
+    const s=fmtHM(cur.startUTh+t);
+    fcx.fillText(s,x-fcx.measureText(s).width/2,H-9);
+  }
+  /* y ticks */
+  const yTicks=4;
+  for(let i=0;i<=yTicks;i++){
+    const v=lo+(hi-lo)*i/yTicks,y=Y(v);
+    fcx.beginPath();fcx.moveTo(AXL,y);fcx.lineTo(W-AXR,y);fcx.stroke();
+    const s=v.toFixed(4);
+    fcx.fillText(s,AXL-6-fcx.measureText(s).width,y+3);
+  }
+  fcx.fillText("UT →",W-AXR-34,H-9);
+  /* error bars + points */
+  fcx.strokeStyle="rgba(126,226,154,0.28)";
+  for(const p of pts){
+    const x=X(p.t);
+    fcx.beginPath();fcx.moveTo(x,Y(p.rel-p.err));fcx.lineTo(x,Y(p.rel+p.err));fcx.stroke();
+  }
+  fcx.fillStyle="#7ee29a";
+  for(const p of pts)fcx.fillRect(X(p.t)-1.2,Y(p.rel)-1.2,2.8,2.8);
+  /* model */
+  fcx.strokeStyle="#ffb454";fcx.lineWidth=1.8;
+  fcx.beginPath();
+  for(let i=0;i<=420;i++){
+    const t=durH*i/420,x=X(t),y=Y(model(t));
+    i?fcx.lineTo(x,y):fcx.moveTo(x,y);
+  }
+  fcx.stroke();fcx.lineWidth=1;
+  fcx.fillStyle="#cdd6e4";fcx.font="12px 'IBM Plex Mono'";
+  fcx.fillText(cur.label,AXL+8,AXT+16);
+  /* residuals */
+  drawAxesBox(rcx,rc.width,rc.height);
+  let rr=0;
+  const res=pts.map(p=>{const r=p.rel-model(p.t);rr=Math.max(rr,Math.abs(r));return r;});
+  const rlim=Math.max(rr*1.15,0.004);
+  const Xr=t=>AXL+(t/durH)*(rc.width-AXL-AXR), Yr=v=>rc.height/2-((v)/rlim)*(rc.height/2-AXT-6);
+  rcx.strokeStyle="#3a4658";
+  rcx.beginPath();rcx.moveTo(AXL,rc.height/2);rcx.lineTo(rc.width-AXR,rc.height/2);rcx.stroke();
+  rcx.fillStyle="#6fd3e0";
+  pts.forEach((p,i)=>rcx.fillRect(Xr(p.t)-1,Yr(res[i])-1,2.4,2.4));
+  rcx.fillStyle="#7d8aa0";rcx.font="11px 'IBM Plex Mono'";
+  rcx.fillText("residuals (data − model) · ±"+(rlim*1085.7).toFixed(1)+" mmag full scale",AXL+8,AXT+12);
+}
+/* ---------------- results log: saved fits ---------------- */
+function saveFit(){
+  if(!cur)return;
+  cur.saved={...cur.fit,
+    chi:document.getElementById("oChi").textContent,
+    rms:document.getElementById("oRms").textContent};
+  cur.fit={...cur.fit};                     // keep working copy separate from the snapshot
+  rebuildFitLog();
+}
+function rebuildFitLog(){
+  const body=document.getElementById("fitLogBody");
+  body.innerHTML="";
+  let any=false;
+  datasets.forEach((d,i)=>{
+    if(!d.saved)return;
+    any=true;
+    const s=d.saved,k=Math.sqrt(s.depPct/100);
+    const tr=document.createElement("tr");
+    tr.innerHTML="<td>"+d.target.name+"</td><td>"+d.label+"</td><td>"+fmtHM(d.startUTh+s.mid)+"</td>"+
+      "<td>"+(+s.depPct).toFixed(3)+"</td><td>"+(+s.dur).toFixed(2)+"</td>"+
+      "<td>"+k.toFixed(4)+"</td><td>"+(k*d.target.Rs*RSUN_RJUP).toFixed(2)+"</td><td>"+s.chi+"</td>";
+    tr.classList.toggle("sel",d===cur);
+    tr.addEventListener("click",()=>{
+      d.fit={mid:s.mid,depPct:s.depPct,dur:s.dur,base:s.base};
+      document.getElementById("dsSel").value=String(i);
+      loadDataset();
+    });
+    body.appendChild(tr);
+  });
+  document.getElementById("fitLog").style.display=any?"":"none";
+  document.getElementById("fitLogEmpty").style.display=any?"none":"";
+  document.getElementById("printBtn").disabled=!any;
+  const nSaved=datasets.filter(d=>d.saved).length;
+  document.getElementById("printHint").innerHTML=any
+    ? "Prints "+nSaved+" fit page"+(nSaved===1?"":"s")+" plus a session summary. In the print dialog, choose "+
+      "<b>Save as PDF</b> as the destination, then attach the file to your written submission."
+    : "Save at least one fit to enable the report.";
+}
+/* =====================================================================
+   PRINTABLE REPORT
+   Rendered into a print-only container and handed to the browser's own
+   print dialog ("Save as PDF"). No external library, so the activity keeps
+   working offline. One page per saved fit, then a summary page carrying the
+   session ID and the real-UT session stamp.
+   ===================================================================== */
+function fmtUTStamp(d){
+  const p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "+
+    p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UT";
+}
+/* a compact standalone SVG of one light curve + its saved model */
+function reportPlotSVG(d){
+  const s=d.saved,W=680,H=250,L=64,R=12,T=14,B=30;
+  const pts=d.points,durH=d.durH;
+  let lo=Infinity,hi=-Infinity;
+  for(const p of pts){lo=Math.min(lo,p.rel);hi=Math.max(hi,p.rel);}
+  const pad=0.18*(hi-lo)+1e-4;lo-=pad;hi+=pad;
+  const X=t=>L+(t/durH)*(W-L-R), Y=v=>H-B-((v-lo)/(hi-lo))*(H-T-B);
+  const model=t=>s.base*trapModel(t,s.mid,s.dur,TAUFRAC_FIT*s.dur,s.depPct/100);
+  let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="100%">';
+  o+='<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-B)+'" fill="none" stroke="#999"/>';
+  const tickEvery=durH>4?1:0.5;
+  for(let t=0;t<=durH+1e-9;t+=tickEvery){
+    const x=X(t).toFixed(1);
+    o+='<line x1="'+x+'" y1="'+T+'" x2="'+x+'" y2="'+(H-B)+'" stroke="#e8e8e8"/>';
+    o+='<text x="'+x+'" y="'+(H-10)+'" font-size="10" text-anchor="middle" fill="#333">'+fmtHM(d.startUTh+t)+'</text>';
+  }
+  for(let i=0;i<=4;i++){
+    const v=lo+(hi-lo)*i/4,y=Y(v).toFixed(1);
+    o+='<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#e8e8e8"/>';
+    o+='<text x="'+(L-6)+'" y="'+(+y+3)+'" font-size="10" text-anchor="end" fill="#333">'+v.toFixed(4)+'</text>';
+  }
+  o+='<text x="'+(L+(W-L-R)/2)+'" y="'+(H-1)+'" font-size="10" text-anchor="middle" fill="#333">simulated UT of observation</text>';
+  o+='<text x="14" y="'+(T+(H-T-B)/2)+'" font-size="10" text-anchor="middle" fill="#333" transform="rotate(-90 14 '+(T+(H-T-B)/2)+')">relative flux</text>';
+  let dots="";
+  for(const p of pts)dots+='<circle cx="'+X(p.t).toFixed(1)+'" cy="'+Y(p.rel).toFixed(1)+'" r="1.1" fill="#2a2a2a"/>';
+  o+=dots;
+  let path="";
+  for(let i=0;i<=300;i++){
+    const t=durH*i/300;
+    path+=(i?"L":"M")+X(t).toFixed(1)+","+Y(model(t)).toFixed(1);
+  }
+  o+='<path d="'+path+'" fill="none" stroke="#c8102e" stroke-width="1.6"/>';
+  o+='</svg>';
+  return o;
+}
+function reportResidSVG(d){
+  const s=d.saved,W=680,H=110,L=64,R=12,T=10,B=22;
+  const pts=d.points,durH=d.durH;
+  const model=t=>s.base*trapModel(t,s.mid,s.dur,TAUFRAC_FIT*s.dur,s.depPct/100);
+  let rr=0;
+  const res=pts.map(p=>{const r=p.rel-model(p.t);rr=Math.max(rr,Math.abs(r));return r;});
+  const rlim=Math.max(rr*1.15,0.004);
+  const X=t=>L+(t/durH)*(W-L-R), Y=v=>T+(H-T-B)/2-(v/rlim)*((H-T-B)/2);
+  let o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="100%">';
+  o+='<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-B)+'" fill="none" stroke="#999"/>';
+  o+='<line x1="'+L+'" y1="'+Y(0).toFixed(1)+'" x2="'+(W-R)+'" y2="'+Y(0).toFixed(1)+'" stroke="#bbb"/>';
+  pts.forEach((p,i)=>{o+='<circle cx="'+X(p.t).toFixed(1)+'" cy="'+Y(res[i]).toFixed(1)+'" r="1" fill="#1a6b8a"/>';});
+  o+='<text x="'+(L+4)+'" y="'+(T+10)+'" font-size="9" fill="#333">residuals (data − model) · full scale ±'+(rlim*1085.7).toFixed(1)+' mmag</text>';
+  o+='</svg>';
+  return o;
+}
+function printReport(){
+  const saved=datasets.filter(d=>d.saved);
+  if(!saved.length)return;
+  const old=document.getElementById("printRoot");
+  if(old)old.remove();
+  const root=document.createElement("div");
+  root.id="printRoot";
+  const stamp=fmtUTStamp(SESSION_START), printed=fmtUTStamp(new Date());
+  let h="";
+  saved.forEach((d,i)=>{
+    const s=d.saved,k=Math.sqrt(s.depPct/100);
+    const comps=d.comps||{};
+    h+='<section class="pg">'
+      +'<div class="phead"><b>Exoplanet Transit Photometry</b> — fitted light curve '+(i+1)+' of '+saved.length
+      +'<span class="pid">Session '+SESSION_ID+'</span></div>'
+      +'<h1>'+d.target.name+'</h1>'
+      +'<div class="psub">'+d.label+'</div>'
+      +reportPlotSVG(d)+reportResidSVG(d)
+      +'<div class="pcols">'
+      +'<table class="ptab"><tr><th colspan="2">Fitted parameters</th></tr>'
+      +'<tr><td>Mid-transit (simulated UT)</td><td>'+fmtHM(d.startUTh+s.mid)+'</td></tr>'
+      +'<tr><td>Depth</td><td>'+(+s.depPct).toFixed(3)+' %</td></tr>'
+      +'<tr><td>Duration</td><td>'+(+s.dur).toFixed(2)+' h</td></tr>'
+      +'<tr><td>Baseline</td><td>'+(+s.base).toFixed(4)+'</td></tr>'
+      +'<tr><td>RMS residual</td><td>'+s.rms+' mmag</td></tr>'
+      +'<tr><td>Reduced χ²</td><td>'+s.chi+'</td></tr></table>'
+      +'<table class="ptab"><tr><th colspan="2">Derived &amp; observing details</th></tr>'
+      +'<tr><td>R<sub>p</sub> / R<sub>★</sub></td><td>'+k.toFixed(4)+'</td></tr>'
+      +'<tr><td>R<sub>★</sub> (catalog)</td><td>'+d.target.Rs.toFixed(2)+' R<sub>☉</sub></td></tr>'
+      +'<tr><td>R<sub>p</sub></td><td>'+(k*d.target.Rs*RSUN_RJUP).toFixed(2)+' R<sub>Jup</sub></td></tr>'
+      +'<tr><td>Filter · exposure</td><td>'+d.filter+' · '+d.exp+' s</td></tr>'
+      +'<tr><td>Data points</td><td>'+d.points.length+'</td></tr>'
+      +'<tr><td>Comparison stars</td><td>'+(comps.c1?comps.c1+", "+comps.c2:"archived run")+'</td></tr></table>'
+      +'</div></section>';
+  });
+  /* summary page */
+  h+='<section class="pg"><div class="phead"><b>Exoplanet Transit Photometry</b> — session summary'
+    +'<span class="pid">Session '+SESSION_ID+'</span></div>'
+    +'<h1>Session summary</h1>'
+    +'<table class="ptab wide"><tr><th colspan="2">Session</th></tr>'
+    +'<tr><td>Session ID</td><td><b>'+SESSION_ID+'</b></td></tr>'
+    +'<tr><td>Session started (real UT)</td><td>'+stamp+'</td></tr>'
+    +'<tr><td>Report printed (real UT)</td><td>'+printed+'</td></tr>'
+    +'<tr><td>Fits saved</td><td>'+saved.length+'</td></tr></table>'
+    +'<table class="ptab wide"><tr><th>Planet</th><th>Light curve</th><th>Mid-transit UT</th><th>Depth (%)</th>'
+    +'<th>Duration (h)</th><th>R<sub>p</sub>/R<sub>★</sub></th><th>R<sub>p</sub> (R<sub>Jup</sub>)</th>'
+    +'<th>RMS</th><th>χ²ᵣ</th></tr>';
+  saved.forEach(d=>{
+    const s=d.saved,k=Math.sqrt(s.depPct/100);
+    h+='<tr><td>'+d.target.name+'</td><td>'+d.label+'</td><td>'+fmtHM(d.startUTh+s.mid)+'</td>'
+      +'<td>'+(+s.depPct).toFixed(3)+'</td><td>'+(+s.dur).toFixed(2)+'</td><td>'+k.toFixed(4)+'</td>'
+      +'<td>'+(k*d.target.Rs*RSUN_RJUP).toFixed(2)+'</td><td>'+s.rms+'</td><td>'+s.chi+'</td></tr>';
+  });
+  h+='</table>'
+    +'<p class="pnote"><b>About this report.</b> Generated by the Open Educational Observatory exoplanet transit '
+    +'activity. The session ID and the real-UT stamps above identify this observing session; the UT times reported '
+    +'for the observations themselves are the simulation\u2019s own clock and are not expected to agree with the real-UT '
+    +'stamps. Values here are the student\u2019s fitted results and are not research measurements.</p>'
+    +'<p class="pnote">Attach this report to your written submission.</p>'
+    +'</section>';
+  root.innerHTML=h;
+  document.body.appendChild(root);
+  window.print();
+}
+function exportCSV(){
+  if(!cur)return;
+  let s="ut_hours,rel_flux,err\n";
+  for(const p of cur.points)s+=((cur.startUTh+p.t)%24).toFixed(5)+","+p.rel.toFixed(6)+","+p.err.toFixed(6)+"\n";
+  const blob=new Blob([s],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=cur.label.replace(/[^\w]+/g,"_")+".csv";
+  a.click();URL.revokeObjectURL(a.href);
+}
+/* sliders move only when the handle itself is grabbed — a stray click on
+   the track will not jump the value away from a good fit */
+function grabOnly(sl){
+  sl.addEventListener("pointerdown",e=>{
+    const r=sl.getBoundingClientRect();
+    const min=+sl.min,max=+sl.max,val=+sl.value;
+    const frac=(max>min)?(val-min)/(max-min):0;
+    const pad=9;                               // ≈ half the thumb width
+    const thumbX=r.left+pad+frac*(r.width-2*pad);
+    if(Math.abs(e.clientX-thumbX)>14){e.preventDefault();sl.focus();}
+  });
+}
+
+/* ---------------- practice data set ---------------- */
+(function practice(){
+  const t=TARGETS[5];                                    // WASP-43 b
+  const rng=mulberry32(431),sec=60,cad=sec+READ_S,durH=2.5,startUTh=3.25,f="V";
+  const mid=1.18;
+  const comps=[{V:t.V+0.35,BV:0.8,UB:ubOf(0.8),VR:vrOf(0.8),VI:viOf(0.8)},
+               {V:t.V+0.60,BV:1.0,UB:ubOf(1.0),VR:vrOf(1.0),VI:viOf(1.0)}];
+  const pts=[];
+  const sysAmp=0.0008,sysPer=4.2,sysPh=1.3;
+  const NC=(rateOf(comps[0],f)+rateOf(comps[1],f))*sec;
+  for(let i=0;i<Math.floor(durH*3600/cad);i++){
+    const tH=(i+0.5)*cad/3600;
+    /* the practice set is a fixed archived run, identical for every student:
+       it uses the published depth, not this session's offset */
+    const m=trapModel(tH,mid,t.T14,TAU_TRUE[t.name]*t.T14,t.depthPub);
+    const NT=rateOf(t.hostStar,f)*sec*m;
+    const nT=Math.max(1,NT+rnorm(rng)*Math.sqrt(NT+SKYCPS[f]*sec));
+    const nC=Math.max(1,NC+rnorm(rng)*Math.sqrt(NC+2*SKYCPS[f]*sec));
+    const scint=(SCINT/Math.sqrt(sec))*0.55;
+    const sys=sysAmp*Math.sin(2*Math.PI*(tH+sysPh)/sysPer);
+    pts.push({t:tH,rel:(nT/nC)*(1+scint*rnorm(rng))*(1+sys),
+      err:Math.sqrt((NT+SKYCPS[f]*sec)/(NT*NT)+(NC+2*SKYCPS[f]*sec)/(NC*NC)+scint*scint+SYSFLOOR*SYSFLOOR)});
+  }
+  datasets.push({label:"Practice · WASP-43 b (archived run)",practice:true,
+    target:t,startUTh,durH,exp:sec,filter:f,points:normalizePoints(pts),
+    fit:{mid:durH/2,depPct:1.0,dur:1.5,base:1.0}});
+})();
+
+/* ---------------- screens & main loop ---------------- */
+function showScreen(which){
+  for(const s of["obs","fit","info"]){
+    document.getElementById("scr-"+s).classList.toggle("active",s===which);
+    document.getElementById("tab"+s[0].toUpperCase()+s.slice(1)).classList.toggle("active",s===which);
+  }
+  if(which==="fit"){refreshDsSel();if(!cur)document.getElementById("dsSel").value="0";loadDataset();}
+}
+/* leaving the page discards every light curve and saved fit — warn first */
+function hasProgress(){
+  return seq.running || datasets.some(d=>!d.practice) || datasets.some(d=>d.saved);
+}
+function confirmLeave(){
+  if(!hasProgress())return true;
+  const n=datasets.filter(d=>!d.practice).length, f=datasets.filter(d=>d.saved).length;
+  let what=[];
+  if(seq.running)what.push("a sequence still running");
+  if(n)what.push(n+" light curve"+(n===1?"":"s"));
+  if(f)what.push(f+" saved fit"+(f===1?"":"s"));
+  return confirm("Leaving this page will discard "+what.join(" and ")+
+    ".\n\nNothing is saved to the server — your observations exist only in this browser tab. "+
+    "Export any light curves you still need as CSV first.\n\nLeave for the homepage anyway?");
+}
+window.addEventListener("beforeunload",e=>{
+  if(hasProgress()){e.preventDefault();e.returnValue="";}
+});
+let lastT=null;
+function frame(now){
+  if(lastT===null)lastT=now;
+  const dt=Math.min(0.2,(now-lastT)/1000);lastT=now;
+  seqPump();
+  const dtSim=dt*(seq.running?WARP:1);
+  const d=simNow();
+  document.getElementById("utClock").textContent=fmtHMS(utHours(d),0);
+  document.getElementById("lstClock").textContent=fmtHMS(lstHours(d),0);
+  document.getElementById("jdClock").textContent=julianDate(d).toFixed(4);
+  if(st.dome==="open"&&!st.tracking&&!st.slew)
+    st.raDeg=(st.raDeg+(360/86164.09)*dtSim+360)%360;
+  const domeTarget=st.dome==="open"?1:0;
+  if(st.domeAnim!==domeTarget){
+    const dir=Math.sign(domeTarget-st.domeAnim);
+    st.domeAnim=Math.max(0,Math.min(1,st.domeAnim+dir*dt/3.5));
+    document.getElementById("domeLed").classList.toggle("open",st.domeAnim>0.97);
+    setEnabled();
+  }
+  slewTick(dt);moveTick(dt);capTick(dt);
+  document.getElementById("raOut").textContent=fmtHMS(st.raDeg/15,1);
+  document.getElementById("decOut").textContent=fmtDMS(st.decDeg);
+  document.getElementById("targOut").textContent=nearestHostLabel();
+  if(document.getElementById("scr-obs").classList.contains("active")){drawTV();drawCam();}
+  requestAnimationFrame(frame);
+}
+(function init(){
+  buildTargetUI();
+  document.querySelectorAll("[data-dir]").forEach(b=>{
+    const down=e=>{e.preventDefault();st.moveDir=b.dataset.dir;};
+    const up=()=>{st.moveDir=null;};
+    b.addEventListener("pointerdown",down);
+    window.addEventListener("pointerup",up);
+    b.addEventListener("pointerleave",up);
+    b.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter")st.moveDir=b.dataset.dir;});
+    b.addEventListener("keyup",up);
+  });
+  ["sMid","sDep","sDur","sBas"].forEach(id=>grabOnly(document.getElementById(id)));
+  setInterval(seqPump,2000);                              // keeps the run alive in background tabs
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)seqPump();});
+  // park the telescope at zenith (RA = current LST, Dec = site latitude)
+  st.raDeg=(lstHours(new Date())*15+360)%360;
+  st.decDeg=SITE.latDeg;
+  status("telStatus","Telescope parked at zenith. Choose a program target and slew to the field.");
+  planChanged();
+  refreshDsSel();
+  drawLive();
+  setEnabled();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
