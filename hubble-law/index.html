@@ -108,6 +108,22 @@
     .twocol{grid-template-columns:1fr}
   }
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  /* ---------- ACCESSIBILITY (portable block) ---------- */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .hdr-util{flex-basis:100%;display:flex;justify-content:flex-end;margin-top:2px}
+  #hcBtn{font-size:11px;padding:3px 9px}
+  body.hc{--text:#eef3fa;--text-dim:#b7c3d6;--line:#4d5f7a;--amber:#ffd21f;
+    --cyan:#9fe8f5;--green:#8df0a8;--red:#ff8a70;--amber-dim:#b89a3a}
+  body.hc .readout{text-shadow:none}
+  body.hc .readout.green,body.hc .readout.cyan{text-shadow:none}
+  body.hc button.ctrl{border-color:#5d7292}
+  body.hc button.ctrl:focus-visible,body.hc nav button:focus-visible,
+  body.hc select:focus-visible,body.hc input:focus-visible,body.hc nav a.navlink:focus-visible{
+    outline:3px solid #ffe95a;outline-offset:2px}
+  body.hc .hint{color:#b7c3d6}
+  #assistBtn{display:none;width:100%;margin-top:6px}
+  body.hc #assistBtn{display:block}
 </style>
 </head>
 <body>
@@ -122,10 +138,14 @@
     <button id="tabInfo" onclick="showScreen('info')">Information</button>
     <a class="navlink" href="../" onclick="confirmLeave(event)">Homepage</a>
   </nav>
+  <div class="hdr-util">
+    <button class="ctrl" id="hcBtn" onclick="toggleContrast()" aria-pressed="false"> Accessibility Mode: OFF </button>
+  </div>
 </header>
 
 <!-- ============ OBSERVATORY ============ -->
 <section id="scr-obs" class="screen active">
+  <h2 class="sr-only">Observatory</h2>
   <div class="clock-row">
     <div><span class="lbl">Universal Time</span><span class="readout big" id="utClock">--:--:--</span></div>
     <div><span class="lbl">Local Sidereal Time</span><span class="readout big" id="lstClock">--:--:--</span></div>
@@ -136,7 +156,7 @@
   <div class="obs-grid">
     <div id="obsTv">
       <div class="tv-wrap">
-        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <canvas id="tvCanvas" width="640" height="560" role="img" aria-label="Telescope TV camera view of the sky. The coordinate readouts below report the current pointing; the Nearest object readout names the object at the slit."></canvas>
         <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b id="fovTag">FINDER 2.5°</b></div>
       </div>
       <div class="coord-row">
@@ -148,7 +168,7 @@
 
       <div id="specPanel" class="panel">
         <h3>Photon-Counting Spectrometer · 3700–7000 Å</h3>
-        <canvas id="specCanvas" width="720" height="240"></canvas>
+        <canvas id="specCanvas" width="720" height="240" role="img" aria-label="Live spectrometer display. The photon count, integration time, and signal-to-noise readouts below report its state as text."></canvas>
         <div class="spec-stats">
           <div><span class="lbl">Photon count</span><span class="readout" id="phCount">0</span></div>
           <div><span class="lbl">Photons / channel</span><span class="readout" id="phChan">0.0</span></div>
@@ -160,7 +180,7 @@
             <button class="ctrl" id="saveBtn" onclick="saveSpectrum()" disabled>Save spectrum</button>
           </div>
         </div>
-        <div class="statusline" id="specStatus">Open the dome, turn on tracking, and center a galaxy between the slit jaws.</div>
+        <div class="statusline" id="specStatus" role="status" aria-live="polite">Open the dome, turn on tracking, and center a galaxy between the slit jaws.</div>
       </div>
 
       <div class="panel" id="domePanel">
@@ -192,6 +212,7 @@
           <button class="ctrl" data-dir="E">E</button><button class="blank"></button><button class="ctrl" data-dir="W">W</button>
           <button class="blank"></button><button class="ctrl" data-dir="S">S</button><button class="blank"></button>
         </div>
+        <button class="ctrl" id="assistBtn" onclick="assistCenter()">Assist: center / next galaxy</button>
         <div class="row spread">
           <span class="lbl" style="margin:0">Slew rate</span>
           <select id="rateSel" aria-label="Slew rate">
@@ -205,7 +226,7 @@
         <h3>Target List · Galaxy Clusters</h3>
         <select id="hotSel" style="width:100%" aria-label="Cluster field list"></select>
         <div class="row" style="margin-top:8px">
-          <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to field</button>
+          <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to Target</button>
           <button class="ctrl" id="catBtn" onclick="toggleCatalog()">Use full catalog</button>
         </div>
         <div class="cat-badge hubble" id="catBadge">Catalog: Hubble program · 6 fields</div>
@@ -224,6 +245,7 @@
 
 <!-- ============ MEASURE REDSHIFT ============ -->
 <section id="scr-mez" class="screen">
+  <h2 class="sr-only">Measure Redshift</h2>
   <div class="mez-stack">
     <div class="panel">
       <h3>Galaxy Spectrum</h3>
@@ -240,7 +262,7 @@
     </div>
 
     <div>
-      <canvas id="mezCanvas" width="1080" height="440"></canvas>
+      <canvas id="mezCanvas" width="1080" height="440" role="img" aria-label="Saved galaxy spectrum. Wavelengths can be entered directly in the measurement boxes below as a full keyboard alternative to the crosshair."></canvas>
       <div class="row" style="margin-top:8px">
         <button class="ctrl" onclick="mzZoom(0.6)">Zoom in</button>
         <button class="ctrl" onclick="mzZoom(1/0.6)">Zoom out</button>
@@ -336,16 +358,17 @@
 
 <!-- ============ HUBBLE DIAGRAM ============ -->
 <section id="scr-hub" class="screen">
+  <h2 class="sr-only">Hubble Diagram</h2>
   <div class="hub-grid">
     <div>
-      <canvas id="hubCanvas" width="760" height="520"></canvas>
+      <canvas id="hubCanvas" width="760" height="520" role="img" aria-label="Hubble diagram of your recorded galaxies: velocity against distance. The same values appear as text in the data table on the Measure Redshift page."></canvas>
       <p class="hint">Each point is a galaxy from your data table: recession velocity against distance. Real points scatter —
         galaxies have their own motions within clusters of hundreds of km/s on top of the cosmic expansion, and the
         standard-candle assumption (M = −22 for every galaxy) is only approximately true. Fit the trend, not any single point.</p>
     </div>
     <div class="stack">
       <div class="panel">
-        <h3>Fit Your Data</h3>
+        <h3>Fit Your Line</h3>
         <span class="lbl">Slope H₀ (km/s/Mpc)</span>
         <div class="row">
           <input type="range" id="hSlider" min="20" max="150" step="0.5" value="55" style="flex:1" oninput="hFromSlider()">
@@ -370,7 +393,7 @@
       </div>
       <div class="panel">
         <h3>Session Report</h3>
-        <button class="ctrl" style="width:100%" onclick="downloadReport()">Download session report (PDF)</button>
+        <button class="ctrl" style="width:100%" onclick="downloadReport()">Download Results</button>
         <p class="hint">Produces a timestamped PDF of this observing session — your observing log, data table, fit,
           and Hubble diagram — to submit alongside your written work.</p>
       </div>
@@ -388,7 +411,7 @@
        Hubble parameter, and estimate the age of the Universe. It runs in any modern browser with no installation.</p>
 
     <h2>The exercise, briefly</h2>
-    <p>1. Choose a cluster field from the field list — the default <b>Hubble catalog</b> holds the six clusters of the
+    <p>1. Choose a cluster field from the target list — the default <b>Hubble catalog</b> holds the six clusters of the
        classic Hubble–Humason program (Virgo out to Hydra); the <b>full catalog</b> adds six more of Humason's survey
        fields, including spiral-rich Hercules. Open the dome and slew; tracking engages on arrival. 2. In the Telescope
        view, center a galaxy's nucleus between the slit jaws and integrate. Aim for S/N ≳ 10: bright Virgo members take
@@ -430,6 +453,22 @@
        <b>session report</b> (PDF) of the observing log, data table, and fitted diagram can be downloaded from the
        Hubble Diagram page for submission alongside written work. Nothing in this simulation is a source of
        research measurements.</p>
+
+    <h2>Accessibility</h2>
+    <p>This activity aims to conform to <b>WCAG 2.1 Level AA</b>. All measurements, readouts, tables, and equations are
+       real HTML text available to screen readers and browser zoom; canvas graphics carry text alternatives, and the
+       spectrometer status line announces its updates. Every control is keyboard-operable, including the telescope:
+       focus a direction button and hold Enter or Space to slew. The crosshair measurement has a full keyboard
+       alternative — wavelengths and redshifts can be typed directly into the measurement boxes. An <b>accessibility
+       mode</b> (toggle below the page header; enabled automatically if your system requests increased contrast)
+       brightens the interface, restyles all chart overlays in a colorblind-safe high-contrast palette, and adds
+       redundant non-color encodings — the K and H markers, for instance, differ by solid versus dashed line as well
+       as by color. Enabling accessibility mode also reveals a <b>centering assist</b> button on the Observatory page
+       that places the spectrometer slit on a galaxy in the current field, cycling to the next member with each press
+       so every galaxy is reachable — for anyone, low-vision, motor-impaired, or otherwise, for whom fine slewing is
+       a barrier; using it leaves no mark in the session report. The observing task is intrinsically visual
+       in places; if any part of this activity presents a barrier these accommodations don't resolve, students should
+       contact their instructor, and issues can be reported through the project repository.</p>
 
     <h2>Credit &amp; lineage</h2>
     <p>The aim of this project is to give students a realistic experience of controlling a telescope and analyzing
@@ -478,6 +517,43 @@ function fmtDMS(deg){
   const D=Math.floor(deg),m=(deg-D)*60,M=Math.floor(m),S=Math.round((m-M)*60);
   return sign+String(D).padStart(2,"0")+"°"+String(M).padStart(2,"0")+"′"+String(S).padStart(2,"0")+"″";
 }
+
+/* ---------------- ACCESSIBILITY: canvas palettes (portable block) ------------
+   All interface overlays drawn on canvases take their colors from `pal`, so the
+   high-contrast toggle restyles them; the sky itself (stars, galaxies, dome) is
+   content and stays photorealistic in both modes. ---------------------------- */
+const PAL={
+  normal:{
+    axis:"#4f96aa", grid:"#152030", frame:"#1e2a3c", frameSpec:"#123240",
+    spec:"#6fd3e0", dim:"#54637c",
+    slit:"rgba(228,87,61,.95)", box:"rgba(228,87,61,.9)",
+    tpl:"rgba(228,87,61,.85)", tplText:"#e4573d",
+    rest:"rgba(125,138,160,.4)", restText:"#7d8aa0",
+    k:"#ffb454", h:"#7ee29a", cursor:"rgba(111,211,224,.9)",
+    hubLine:"#ffb454", hubPoint:"#6fd3e0",
+  },
+  hc:{
+    axis:"#bfe3ef", grid:"#26364a", frame:"#4d5f7a", frameSpec:"#4d5f7a",
+    spec:"#a5eefb", dim:"#9fb0c6",
+    slit:"rgba(255,236,80,1)", box:"rgba(255,236,80,.95)",
+    tpl:"rgba(255,238,90,.95)", tplText:"#ffe95a",
+    rest:"rgba(210,220,235,.6)", restText:"#d3dcea",
+    k:"#ffd21f", h:"#8df0a8", cursor:"rgba(180,240,252,1)",
+    hubLine:"#ffd21f", hubPoint:"#a5eefb",
+  },
+};
+let pal=PAL.normal;
+function setContrast(on,skipStore){
+  document.body.classList.toggle("hc",on);
+  pal=on?PAL.hc:PAL.normal;
+  const b=document.getElementById("hcBtn");
+  b.textContent="Accessibility Mode: "+(on?"ON":"OFF");
+  b.setAttribute("aria-pressed",on?"true":"false");
+  b.classList.toggle("on",on);
+  if(!skipStore){try{localStorage.setItem("oeo-a11y",on?"1":"0");}catch(e){}}
+  if(typeof drawMez==="function"){drawMez();drawHub();}
+}
+function toggleContrast(){setContrast(!document.body.classList.contains("hc"));}
 
 /* ---------------- constants ---------------- */
 const WL0=3700, WL1=7000, NCH=1651, DWL=(WL1-WL0)/(NCH-1);   // 2.0 Å/channel
@@ -537,6 +613,7 @@ const CLUSTER_DEFS=[
 ];
 const GALAXIES=[];
 (function buildClusters(){
+  const usedNames=new Set();
   for(const cl of CLUSTER_DEFS){
     const D_Mpc=cl.cz/H0_TRUE;
     /* display size floors at the Boötes scale so the most distant members
@@ -553,8 +630,13 @@ const GALAXIES=[];
       const m=M_ABS+5*Math.log10(D_Mpc*1e6)-5+rnorm(RNG)*0.25;
       const rh=Math.floor(raDeg/15),rm=Math.round((raDeg/15-rh)*60);
       const dsgn=decDeg<0?"−":"+",dd=Math.floor(Math.abs(decDeg)),dm=Math.round((Math.abs(decDeg)-dd)*60);
-      const name="OEO J"+String(rh).padStart(2,"0")+String(Math.min(59,rm)).padStart(2,"0")
+      let name="OEO J"+String(rh).padStart(2,"0")+String(Math.min(59,rm)).padStart(2,"0")
         +dsgn+String(dd).padStart(2,"0")+String(Math.min(59,dm)).padStart(2,"0");
+      /* compact clusters can round two members to the same designation;
+         disambiguate with a letter suffix, as real surveys do */
+      if(usedNames.has(name)){let c=98;while(usedNames.has(name+String.fromCharCode(c)))c++;
+        name=name+String.fromCharCode(c);}
+      usedNames.add(name);
       GALAXIES.push({name,cluster:cl.name,raDeg,decDeg,m,z,gtype:k<nSF?"sf":"ell",
         sizeDeg:sizeDeg*(0.75+0.5*RNG()),ell:0.25+0.45*RNG(),pa:RNG()*Math.PI,
         armPhase:RNG()*2*Math.PI,chir:RNG()<0.5?-1:1,kind:"galaxy"});
@@ -802,10 +884,10 @@ function drawTV(){
     }
     if(st.view==="finder"){
       const box=(0.25/fov)*H;
-      tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1;
+      tvx.strokeStyle=pal.box;tvx.lineWidth=1;
       tvx.strokeRect(W/2-box/2,H/2-box/2,box,box);
     }else{
-      tvx.strokeStyle="rgba(228,87,61,.95)";tvx.lineWidth=2;tvx.beginPath();
+      tvx.strokeStyle=pal.slit;tvx.lineWidth=2;tvx.beginPath();
       tvx.moveTo(W/2-7,H/2-26);tvx.lineTo(W/2-7,H/2+26);
       tvx.moveTo(W/2+7,H/2-26);tvx.lineTo(W/2+7,H/2+26);tvx.stroke();
     }
@@ -815,10 +897,10 @@ function drawTV(){
     tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
     tvx.strokeStyle="rgba(111,211,224,.08)";
     for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
-    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle=pal.spec;tvx.textAlign="center";
     const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
     tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
-    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle=pal.axis;
     tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
     tvx.textAlign="left";
   }
@@ -838,7 +920,7 @@ function drawTV(){
       tvx.fillRect(W-24,y,4,4);
     }
     if(domeOpen<0.03){
-      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle=pal.dim;tvx.textAlign="center";
       tvx.fillText("DOME CLOSED",W/2,H/2);
       tvx.font="12px 'IBM Plex Mono'";
       tvx.fillText("open the dome to see the sky",W/2,H/2+22);
@@ -896,7 +978,43 @@ let slewDir=null;
 document.querySelectorAll(".nsew button[data-dir]").forEach(b=>{
   b.addEventListener("pointerdown",()=>{if(!st.slew)slewDir=b.dataset.dir;});
   window.addEventListener("pointerup",()=>{slewDir=null;});
+  /* full keyboard operation: hold Enter or Space to slew, release to stop */
+  b.addEventListener("keydown",e=>{
+    if((e.key==="Enter"||e.key===" ")&&!st.slew){e.preventDefault();slewDir=b.dataset.dir;}});
+  b.addEventListener("keyup",e=>{if(e.key==="Enter"||e.key===" ")slewDir=null;});
+  b.addEventListener("blur",()=>{if(slewDir===b.dataset.dir)slewDir=null;});
 });
+/* accessibility assist (shown in accessibility mode): place the slit on a
+   galaxy in the current field, for users who can locate a field but not
+   fine-center a target. Repeated presses CYCLE through every galaxy in the
+   field in a stable order — first press goes to the nearest member; each
+   press after that advances to the next, wrapping around, so all members
+   are reachable and no ping-ponging between the two closest can occur.
+   Leaves no trace in the session report. */
+function assistCenter(){
+  if(st.domeAnim<0.98||st.slew){
+    document.getElementById("specStatus").textContent="Open the dome (and wait for any slew) before using the centering assist.";return;}
+  const ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180);
+  const dist=g=>Math.hypot((g.raDeg-ra0)*cosd,(g.decDeg-dec0));
+  /* everything within ~a finder field of the pointing, in a stable order */
+  const field=GALAXIES.filter(g=>dist(g)<1.25).sort((a,b)=>a.name<b.name?-1:1);
+  if(!field.length){
+    document.getElementById("specStatus").textContent="No galaxy within the current field — slew to a cluster field first.";return;}
+  const cur=objectInSlit();
+  let target;
+  if(cur&&cur.obj.kind==="galaxy"&&field.some(g=>g.name===cur.obj.name)){
+    const i=field.findIndex(g=>g.name===cur.obj.name);
+    target=field[(i+1)%field.length];           // advance the cycle
+  }else{
+    target=field.reduce((b,g)=>dist(g)<dist(b)?g:b);   // first press: nearest
+  }
+  st.ra=target.raDeg/15;st.dec=target.decDeg;
+  if(st.view!=="telescope")toggleView();
+  document.getElementById("specStatus").textContent=
+    "Centering assist: slit placed on "+target.name+" ("+target.cluster+") - galaxy "
+    +(field.findIndex(g=>g.name===target.name)+1)+" of "+field.length
+    +" in this field. Press Go to integrate, or Assist again for the next galaxy.";
+}
 
 /* ---------------- field list & catalog toggle ---------------- */
 let catalog="hubble";   // "hubble" (classic program) or "full"
@@ -1032,7 +1150,7 @@ function specStop(){
   document.getElementById("goBtn").disabled=false;
   document.getElementById("stopBtn").disabled=true;
   document.getElementById("saveBtn").disabled=spec.total<=0;
-  document.getElementById("specStatus").textContent="Integration paused. Press Go to add more counts, or save.";
+  document.getElementById("specStatus").textContent="Integration paused at S/N "+document.getElementById("snrOut").textContent+" after "+spec.secs.toFixed(0)+" seconds. Press Go to add more counts, or save.";
 }
 function poisson(mu){
   if(mu>25)return Math.max(0,Math.round(mu+randn()*Math.sqrt(mu)));
@@ -1067,9 +1185,9 @@ function specTick(dt){
 function drawSpec(){
   const W=sc.width,H=sc.height,pad=34;
   scx.fillStyle="#04121a";scx.fillRect(0,0,W,H);
-  scx.strokeStyle="#123240";scx.lineWidth=1;
+  scx.strokeStyle=pal.frameSpec;scx.lineWidth=1;
   scx.strokeRect(pad,8,W-pad-8,H-30);
-  scx.fillStyle="#3f7d8c";scx.font="10px 'IBM Plex Mono'";
+  scx.fillStyle=pal.axis;scx.font="10px 'IBM Plex Mono'";
   for(let wl=3800;wl<=7000;wl+=400){
     const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-8);
     scx.fillText(wl,x-12,H-8);
@@ -1079,7 +1197,7 @@ function drawSpec(){
   scx.fillText("REL. INTENSITY",-40,0);scx.restore();
   let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
   if(mx<=0)return;
-  scx.fillStyle="#6fd3e0";scx.strokeStyle="#6fd3e0";
+  scx.fillStyle=pal.spec;scx.strokeStyle=pal.spec;
   const y0=8,hgt=H-38;
   if(spec.running){
     for(let i=0;i<NCH;i++){
@@ -1212,12 +1330,12 @@ function mzReset(){mez.wl0=WL0;mez.wl1=WL1;drawMez();}
 function drawMez(){
   const W=mc.width,H=mc.height,padL=44,padB=30,padT=12,padR=12;
   mcx.fillStyle="#0d1420";mcx.fillRect(0,0,W,H);
-  mcx.strokeStyle="#1e2a3c";mcx.lineWidth=1;
+  mcx.strokeStyle=pal.frame;mcx.lineWidth=1;
   mcx.strokeRect(padL,padT,W-padL-padR,H-padT-padB);
   const x2px=wl=>padL+(wl-mez.wl0)/(mez.wl1-mez.wl0)*(W-padL-padR);
   const span=mez.wl1-mez.wl0;
   const step=span>2400?400:span>1200?200:span>500?100:span>200?50:span>80?20:10;
-  mcx.fillStyle="#3f7d8c";mcx.font="11px 'IBM Plex Mono'";
+  mcx.fillStyle=pal.axis;mcx.font="11px 'IBM Plex Mono'";
   for(let wl=Math.ceil(mez.wl0/step)*step;wl<=mez.wl1;wl+=step){
     const x=x2px(wl);
     mcx.fillText(wl,x-16,H-10);
@@ -1227,7 +1345,7 @@ function drawMez(){
   mcx.save();mcx.translate(12,H/2);mcx.rotate(-Math.PI/2);
   mcx.fillText("REL. INTENSITY",-44,0);mcx.restore();
   if(!mez.cur){
-    mcx.fillStyle="#54637c";mcx.font="600 18px 'Rajdhani'";mcx.textAlign="center";
+    mcx.fillStyle=pal.dim;mcx.font="600 18px 'Rajdhani'";mcx.textAlign="center";
     mcx.fillText("NO SPECTRUM — observe a galaxy at the telescope first",W/2,H/2);
     mcx.textAlign="left";return;
   }
@@ -1238,9 +1356,9 @@ function drawMez(){
     for(const[wl,lab]of refs){
       if(wl<mez.wl0||wl>mez.wl1)continue;
       const x=x2px(wl);
-      mcx.strokeStyle="rgba(125,138,160,.4)";mcx.setLineDash([4,4]);
+      mcx.strokeStyle=pal.rest;mcx.setLineDash([4,4]);
       mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();mcx.setLineDash([]);
-      mcx.fillStyle="#7d8aa0";mcx.font="12px 'IBM Plex Mono'";
+      mcx.fillStyle=pal.restText;mcx.font="12px 'IBM Plex Mono'";
       mcx.fillText(lab,x+3,padT+14+(vis%3)*15);
       vis++;
     }
@@ -1251,7 +1369,7 @@ function drawMez(){
   let mx=0,mn=1e9;for(let i=i0;i<=i1;i++){mx=Math.max(mx,d[i]);mn=Math.min(mn,d[i]);}
   const pad=(mx-mn)*0.08||0.05;mx+=pad;mn=Math.max(0,mn-pad);
   const y2px=v=>padT+(H-padT-padB)*(1-(v-mn)/(mx-mn));
-  mcx.strokeStyle="#6fd3e0";mcx.lineWidth=1.2;mcx.beginPath();
+  mcx.strokeStyle=pal.spec;mcx.lineWidth=1.2;mcx.beginPath();
   for(let i=i0;i<=i1;i++){
     const x=x2px(WL0+i*DWL),y=y2px(d[i]);
     i===i0?mcx.moveTo(x,y):mcx.lineTo(x,y);
@@ -1265,20 +1383,22 @@ function drawMez(){
       const wl=l0*(1+mez.z);
       if(wl<mez.wl0||wl>mez.wl1)continue;
       const x=x2px(wl);
-      mcx.strokeStyle="rgba(228,87,61,.85)";mcx.lineWidth=1.2;
+      mcx.strokeStyle=pal.tpl;mcx.lineWidth=1.2;
       mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
-      mcx.fillStyle="#e4573d";mcx.font="12px 'IBM Plex Mono'";
+      mcx.fillStyle=pal.tplText;mcx.font="12px 'IBM Plex Mono'";
       mcx.fillText(lab,x+3,H-padB-8-(vis%3)*15);
       vis++;
     }
   }
   /* recorded K/H click measurements */
-  for(const[id,color,lab]of[["wlK","#ffb454","λK"],["wlH","#7ee29a","λH"]]){
+  for(const[id,color,lab,dash]of[["wlK",pal.k,"λK",null],["wlH",pal.h,"λH",[6,4]]]){
     const v=parseFloat(document.getElementById(id).value);
     if(isFinite(v)&&v>=mez.wl0&&v<=mez.wl1){
       const x=x2px(v);
       mcx.strokeStyle=color;mcx.lineWidth=1;
+      if(dash)mcx.setLineDash(dash);
       mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
+      mcx.setLineDash([]);
       mcx.fillStyle=color;mcx.font="12px 'IBM Plex Mono'";
       mcx.fillText(lab+" "+v.toFixed(1),x+3,padT+14+(lab==="λH"?15:0));
     }
@@ -1286,7 +1406,7 @@ function drawMez(){
   /* live cursor */
   if(mez.cursorWl!=null&&mez.cursorWl>=mez.wl0&&mez.cursorWl<=mez.wl1){
     const x=x2px(mez.cursorWl);
-    mcx.strokeStyle="rgba(111,211,224,.9)";mcx.lineWidth=1;
+    mcx.strokeStyle=pal.cursor;mcx.lineWidth=1;
     mcx.beginPath();mcx.moveTo(x,padT);mcx.lineTo(x,H-padB);mcx.stroke();
   }
 }
@@ -1412,14 +1532,14 @@ function hFromBox(){document.getElementById("hSlider").value=document.getElement
 function drawHub(){
   const W=hc.width,H=hc.height,padL=64,padB=44,padT=16,padR=16;
   hcx.fillStyle="#0d1420";hcx.fillRect(0,0,W,H);
-  hcx.strokeStyle="#1e2a3c";hcx.strokeRect(padL,padT,W-padL-padR,H-padT-padB);
+  hcx.strokeStyle=pal.frame;hcx.strokeRect(padL,padT,W-padL-padR,H-padT-padB);
   const Dmax=Math.max(1000,...rows.map(r=>r.D*1.15));
   const Vmax=Math.max(70000,...rows.map(r=>r.v*1.15));
   const x2=D=>padL+D/Dmax*(W-padL-padR);
   const y2=v=>H-padB-(v/Vmax)*(H-padT-padB);
-  hcx.fillStyle="#3f7d8c";hcx.font="10px 'IBM Plex Mono'";
+  hcx.fillStyle=pal.axis;hcx.font="10px 'IBM Plex Mono'";
   const dStep=Dmax>800?200:100,vStep=Vmax>50000?10000:5000;
-  hcx.strokeStyle="#152030";
+  hcx.strokeStyle=pal.grid;
   for(let D=dStep;D<=Dmax;D+=dStep){const x=x2(D);
     hcx.beginPath();hcx.moveTo(x,padT);hcx.lineTo(x,H-padB);hcx.stroke();
     hcx.fillText(D,x-10,H-padB+14);}
@@ -1430,20 +1550,20 @@ function drawHub(){
   hcx.save();hcx.translate(14,H/2+50);hcx.rotate(-Math.PI/2);
   hcx.fillText("VELOCITY (km/s)",0,0);hcx.restore();
   const H0=parseFloat(document.getElementById("hBox").value)||55;
-  hcx.strokeStyle="#ffb454";hcx.lineWidth=1.6;
+  hcx.strokeStyle=pal.hubLine;hcx.lineWidth=1.6;
   hcx.beginPath();hcx.moveTo(x2(0),y2(0));
   const Dend=Math.min(Dmax,Vmax/H0);
   hcx.lineTo(x2(Dend),y2(Dend*H0));hcx.stroke();
-  hcx.fillStyle="#ffb454";hcx.font="12px 'IBM Plex Mono'";
+  hcx.fillStyle=pal.hubLine;hcx.font="12px 'IBM Plex Mono'";
   hcx.fillText("v = "+H0.toFixed(1)+" · D",x2(Dend*0.75)+6,y2(Dend*0.75*H0)-8);
-  hcx.fillStyle="#6fd3e0";
+  hcx.fillStyle=pal.spec;
   for(const r of rows){
     const x=x2(r.D),y=y2(r.v);
     hcx.beginPath();hcx.arc(x,y,4,0,7);hcx.fill();
     hcx.strokeStyle="#0d1420";hcx.lineWidth=1;hcx.stroke();
   }
   if(!rows.length){
-    hcx.fillStyle="#54637c";hcx.font="600 18px 'Rajdhani'";hcx.textAlign="center";
+    hcx.fillStyle=pal.dim;hcx.font="600 18px 'Rajdhani'";hcx.textAlign="center";
     hcx.fillText("NO DATA YET — record galaxies in the Measure Redshift tab",W/2,H/2);
     hcx.textAlign="left";
   }
@@ -1602,6 +1722,13 @@ function showScreen(id){
   if(id==="hub")drawHub();
 }
 (function init(){
+  let hcOn=false;
+  try{
+    const v=localStorage.getItem("oeo-a11y")??localStorage.getItem("oeo-hc");
+    if(v!==null)hcOn=v==="1";
+    else if(window.matchMedia)hcOn=matchMedia("(prefers-contrast: more)").matches;
+  }catch(e){}
+  setContrast(hcOn,true);
   buildFieldUI();
   const tsel=document.getElementById("tplSel");
   for(const k in TEMPLATES)tsel.add(new Option(TEMPLATES[k].label,k));
