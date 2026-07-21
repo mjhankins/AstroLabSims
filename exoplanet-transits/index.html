@@ -123,6 +123,26 @@
     .cam-left{width:100%;flex:1 1 auto}
   }
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  /* ---------- ACCESSIBILITY (portable block) ---------- */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .hdr-util{flex-basis:100%;display:flex;justify-content:flex-end;margin-top:2px}
+  #hcBtn{font-size:11px;padding:3px 9px}
+  body.hc{--text:#eef3fa;--text-dim:#b7c3d6;--line:#4d5f7a;--amber:#ffd21f;
+    --cyan:#9fe8f5;--green:#8df0a8;--red:#ff8a70;--amber-dim:#b89a3a}
+  body.hc .readout{text-shadow:none}
+  body.hc .readout.green,body.hc .readout.cyan,body.hc .readout.red{text-shadow:none}
+  body.hc button.ctrl{border-color:#5d7292}
+  body.hc button.ctrl:focus-visible,body.hc nav button:focus-visible,
+  body.hc select:focus-visible,body.hc input:focus-visible,body.hc nav a.navlink:focus-visible,
+  body.hc canvas:focus-visible{outline:3px solid #ffe95a;outline-offset:2px}
+  body.hc .hint{color:#b7c3d6}
+  /* keyboard focus ring on the interactive CCD image (both modes) */
+  #camCanvas{outline:none}
+  #camCanvas:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+  /* the aperture-placement assist is revealed only in accessibility mode */
+  #assistRow{display:none}
+  body.hc #assistRow{display:block}
   /* ---- printable report (hidden on screen; the only thing printed) ---- */
   #printRoot{display:none}
   @media print{
@@ -159,10 +179,14 @@
     <button id="tabInfo" onclick="showScreen('info')">Information</button>
     <a class="navlink" href="../" onclick="return confirmLeave()">Homepage</a>
   </nav>
+  <div class="hdr-util">
+    <button class="ctrl" id="hcBtn" onclick="toggleContrast()" aria-pressed="false"> Accessibility Mode: OFF </button>
+  </div>
 </header>
 
 <!-- ============ OBSERVATORY ============ -->
 <section id="scr-obs" class="screen active">
+  <h2 class="sr-only">Observatory</h2>
   <div class="clock-row">
     <div><span class="lbl">Universal Time</span><span class="readout" id="utClock">--:--:--</span></div>
     <div><span class="lbl">Local Sidereal Time</span><span class="readout" id="lstClock">--:--:--</span></div>
@@ -174,7 +198,7 @@
   <div class="obs-grid">
     <div id="obsTv">
       <div class="tv-wrap">
-        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <canvas id="tvCanvas" width="640" height="560" role="img" aria-label="Telescope finder view of the sky, 2.5 degree field. The Right Ascension and Declination readouts below report the current pointing; the Field readout names the program field. A red box marks the CCD camera's footprint."></canvas>
         <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b>FINDER 2.5°</b> · red box = CCD field</div>
       </div>
       <div class="coord-row">
@@ -182,7 +206,7 @@
         <div><span class="lbl">Declination</span><span class="readout big" id="decOut">±--°--′--″</span></div>
         <div style="margin-left:auto"><span class="lbl">Field</span><span class="readout" id="targOut" style="min-width:170px">—</span></div>
       </div>
-      <div class="statusline" id="telStatus"></div>
+      <div class="statusline" id="telStatus" role="status" aria-live="polite"></div>
     </div>
 
     <div class="panel" id="domePanel">
@@ -284,7 +308,7 @@
       <div class="cam-body">
         <div class="cam-main">
           <div class="tv-wrap">
-            <canvas id="camCanvas" width="720" height="600"></canvas>
+            <canvas id="camCanvas" width="720" height="600" tabindex="0" role="img" aria-label="CCD camera image, 15 by 12.5 arcminutes. Star brightnesses and aperture measurements appear as text in the aperture table below. To place an aperture by keyboard: press Target, Comp 1, or Comp 2, then focus this image and use the arrow keys to move between stars and Enter to place."></canvas>
             <div class="tv-tag" id="camTag"><b>CAMERA</b> · no image</div>
           </div>
 
@@ -301,10 +325,10 @@
             <div class="pbar"><div class="pfill" id="pfill"></div></div>
             <span class="warp-tag" id="seqTag">idle</span>
           </div>
-          <canvas id="liveCanvas" width="720" height="190"></canvas>
+          <canvas id="liveCanvas" width="720" height="190" role="img" aria-label="Live light curve building during the observing sequence: relative flux against time. The same points are saved to the Fit the Transit page as a data set."></canvas>
 
-          <div class="statusline" id="camStatus">Open the dome, pick a target from the transit program, and slew to the field.</div>
-          <div class="warnline" id="camWarn"></div>
+          <div class="statusline" id="camStatus" role="status" aria-live="polite">Open the dome, pick a target from the transit program, and slew to the field.</div>
+          <div class="warnline" id="camWarn" role="status" aria-live="polite"></div>
           <p class="hint"><b>Label stars</b> marks the <b style="color:var(--amber)">◆ target</b>, the catalog's
             suggested <b style="color:var(--cyan)">comp</b> stars, and known variables
             (<b style="color:var(--red)">VAR</b>) to avoid; unmarked stars are uncharted. Turn the
@@ -320,6 +344,9 @@
               <button class="ctrl cy" id="asgC1" onclick="setAssign('C1')">Comp 1</button>
               <button class="ctrl cy" id="asgC2" onclick="setAssign('C2')">Comp 2</button>
               <button class="ctrl" id="clrBtn" onclick="clearApertures()">Clear apertures</button>
+            </div>
+            <div id="assistRow" style="margin-top:6px">
+              <button class="ctrl" id="assistBtn" onclick="assistPlaceApertures()" style="width:100%">Assist: place apertures</button>
             </div>
           </div>
           <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-dim);cursor:pointer">
@@ -345,6 +372,7 @@
 
 <!-- ============ FIT THE TRANSIT ============ -->
 <section id="scr-fit" class="screen">
+  <h2 class="sr-only">Fit the Transit</h2>
   <div class="fit-grid">
     <div>
       <div class="panel" style="margin-bottom:10px">
@@ -355,8 +383,8 @@
           <button class="ctrl" onclick="exportCSV()">Export CSV</button>
         </div>
       </div>
-      <canvas id="lcCanvas" width="820" height="360"></canvas>
-      <canvas id="resCanvas" width="820" height="150"></canvas>
+      <canvas id="lcCanvas" width="820" height="360" role="img" aria-label="Light curve with your fitted transit model overlaid: relative flux against time. The fitted depth, duration, mid-transit time, and reduced chi-squared are reported as text in the panels at right; the model is set with the sliders and number boxes there."></canvas>
+      <canvas id="resCanvas" width="820" height="150" role="img" aria-label="Fit residuals: data minus model against time. The root-mean-square residual is reported as text at right; a good fit leaves scatter with no remaining dip."></canvas>
       <p class="hint">Top: relative flux — target counts divided by the summed comparison-star counts, normalized to
         the out-of-transit level. Bottom: residuals (data − model). A good fit leaves residuals that are pure scatter
         around zero, with no dip or bump left behind.</p>
@@ -437,6 +465,7 @@
 
 <!-- ============ INFORMATION ============ -->
 <section id="scr-info" class="screen">
+  <h2 class="sr-only">Information</h2>
   <div class="info-body">
     <h2>What this is</h2>
     <p>This activity simulates <b>CCD time-series photometry of transiting exoplanets</b>: observing a known planet
@@ -525,6 +554,29 @@
        transit carries a small offset, fixed for your session and well inside the published uncertainty. Your fitted
        planet radius should agree with the literature value, but your numbers are your own, from your own data.</p>
 
+    <h2>Accessibility</h2>
+    <p>This activity aims to conform to <b>WCAG 2.1 Level AA</b>. All measurements, readouts, tables, and equations are
+       real HTML text available to screen readers and browser zoom; every canvas carries a text alternative that
+       points to where the same values appear as text, and the telescope and camera status lines announce their
+       updates, with the numbers a non-visual user needs written into the message. Every control is keyboard-operable.
+       The telescope's direction pad works from the keyboard: focus a direction button and hold Enter or Space to
+       slew. Placing photometry apertures — normally done by clicking a star on the CCD image — has a full keyboard
+       alternative: press <b>Target</b>, <b>Comp 1</b>, or <b>Comp 2</b>, then move keyboard focus onto the CCD image
+       (Tab to it) and use the <b>arrow keys</b> to move a highlight between stars and <b>Enter</b> to place the
+       aperture on the highlighted star. The image announces the highlighted star and its role (target, suggested
+       comparison, or known variable) as you move.</p>
+    <p>An <b>accessibility mode</b> (toggle below the page header; enabled automatically if your system requests
+       increased contrast) brightens the interface, restyles every chart and image overlay in a colorblind-safe
+       high-contrast palette, and adds redundant non-color encodings — aperture markers differ by shape and label as
+       well as color (a filled diamond for the target, an open circle for a comparison, a cross for a known variable),
+       and the two comparison apertures draw as dashed rings against the target's solid ring. Accessibility mode also
+       reveals an <b>Assist: place apertures</b> button that assigns all three apertures at once — the target to the
+       program host and the two comparisons to suitable, similar-brightness catalog stars — for anyone, low-vision,
+       motor-impaired, or otherwise, for whom placing three apertures by fine pointing is the barrier. Using it leaves
+       no mark in the session report. The observing task is intrinsically visual in places; if any part of this
+       activity presents a barrier these accommodations don't resolve, students should contact their instructor, and
+       issues can be reported through the project repository.</p>
+
     <h2>Credit &amp; lineage</h2>
     <p>The aim of this project is to give students a realistic experience of controlling a telescope and
        analyzing their own data, grounded in the working practices of professional astronomy. The workflow
@@ -556,6 +608,46 @@
    sim clock w/ uniform 15× compression · differential aperture photometry ·
    scripted observing sequences · trapezoid transit fitting
    ===================================================================== */
+
+/* ---------- ACCESSIBILITY: canvas overlay palette (portable) ----------
+   Only INTERFACE OVERLAY colors route through pal — apertures, chart axes,
+   the CCD footprint box, light-curve points and model. Sky, detector stars,
+   dome, and the saturation bloom stay photorealistic in both modes, exactly
+   as a photograph would. The hc variant turns every red-on-dark overlay
+   (finder box, VAR marker) into high-visibility yellow, the worst case for
+   red–green color vision. */
+const PAL={
+  normal:{
+    ccdBox:"rgba(228,87,61,.9)",
+    apT:"#ffb454", apC:"#6fd3e0", apVar:"#e4573d", apComp:"#6fd3e0",
+    axis:"#4f96aa", grid:"#1b2330", frame:"#2a3546",
+    lcPoint:"#7ee29a", model:"#ffb454", errbar:"rgba(126,226,154,0.28)",
+    resPoint:"#6fd3e0", resAxis:"#3a4658", lcText:"#7d8aa0", label:"#cdd6e4",
+    slewText:"#6fd3e0", slewSub:"#5a93a4",
+  },
+  hc:{
+    ccdBox:"rgba(255,236,80,1)",
+    apT:"#ffd21f", apC:"#9fe8f5", apVar:"#ffe95a", apComp:"#9fe8f5",
+    axis:"#bfe3ef", grid:"#26364a", frame:"#4d5f7a",
+    lcPoint:"#8df0a8", model:"#ffd21f", errbar:"rgba(141,240,168,0.5)",
+    resPoint:"#a5eefb", resAxis:"#6d7f96", lcText:"#d3dcea", label:"#eef3fa",
+    slewText:"#a5eefb", slewSub:"#8fb0bf",
+  },
+};
+let pal=PAL.normal;
+function setContrast(on,skipStore){
+  document.body.classList.toggle("hc",on);
+  pal=on?PAL.hc:PAL.normal;
+  const b=document.getElementById("hcBtn");
+  b.textContent="Accessibility Mode: "+(on?"ON":"OFF");
+  b.setAttribute("aria-pressed",on?"true":"false");
+  b.classList.toggle("on",on);
+  if(!skipStore){try{localStorage.setItem("oeo-a11y",on?"1":"0");}catch(e){}}
+  /* redraw static canvases (the fit charts aren't on an animation loop) */
+  if(typeof drawFitScreen==="function")drawFitScreen();
+}
+function drawFitScreen(){ if(typeof fitChanged==="function") fitChanged(); }
+function toggleContrast(){setContrast(!document.body.classList.contains("hc"));}
 
 /* ---------------- time & site ---------------- */
 const SITE={lonDeg:-111.6,latDeg:31.96};
@@ -799,7 +891,7 @@ function drawTV(){
     }
     // CCD footprint (detector is 15′ × 12.5′)
     const sw=CAM_FOV*pxPerDeg, sh=CAM_FOV*(cam.height/cam.width)*pxPerDeg;
-    tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1.4;
+    tvx.strokeStyle=pal.ccdBox;tvx.lineWidth=1.4;
     tvx.strokeRect(W/2-sw/2,H/2-sh/2,sw,sh);
   }
 
@@ -807,10 +899,10 @@ function drawTV(){
     tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
     tvx.strokeStyle="rgba(111,211,224,.08)";
     for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
-    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle=pal.slewText;tvx.textAlign="center";
     const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
     tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
-    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle=pal.slewSub;
     tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
     tvx.textAlign="left";
   }
@@ -859,7 +951,7 @@ function setEnabled(){
   document.getElementById("slewBtn").disabled=!open||locked;
   document.getElementById("seqBtn").disabled=st.capturing||locked||!open;
   document.querySelectorAll(".nsew button[data-dir]").forEach(b=>b.disabled=!open||locked);
-  ["asgT","asgC1","asgC2","clrBtn","domeBtn","trackBtn","guideBtn"].forEach(id=>
+  ["asgT","asgC1","asgC2","clrBtn","domeBtn","trackBtn","guideBtn","assistBtn"].forEach(id=>
     document.getElementById(id).disabled=seq.running);
   document.getElementById("expSec").disabled=seq.running||st.capturing;
   document.getElementById("expN").disabled=seq.running;
@@ -1185,6 +1277,19 @@ function drawCam(){
   drawDetectorStars(im);
   drawLabels(im.stars);
   drawApertures();
+  drawKbHighlight();
+}
+/* the keyboard navigation cursor — a pulsing ring, only while the CCD
+   canvas holds focus and points at a star */
+function drawKbHighlight(){
+  if(document.activeElement!==cam||!kbStar)return;
+  const p=apPx(kbStar);
+  cx2.strokeStyle=pal.apT;cx2.lineWidth=2;
+  cx2.setLineDash([3,3]);
+  cx2.beginPath();cx2.arc(p.x,p.y,20,0,2*Math.PI);cx2.stroke();
+  cx2.setLineDash([]);
+  cx2.fillStyle=pal.apT;cx2.font="10px 'IBM Plex Mono'";
+  cx2.fillText("▲keyboard",p.x-24,p.y+34);
 }
 function drawDetectorStars(im){
   const W=cam.width,H=cam.height,pxA=CAM_PX_PER_ARCSEC;
@@ -1228,11 +1333,11 @@ function drawLabels(stars){
     const x=W/2-fs.x*pxA, y=H/2-fs.y*pxA;
     if(x<0||x>W||y<0||y>H)continue;
     if(s===t.hostStar){
-      cx2.fillStyle="#ffb454";cx2.fillText("◆ "+t.host+" (target)",x+9,y-8);
+      cx2.fillStyle=pal.apT;cx2.fillText("◆ "+t.host+" (target)",x+9,y-8);
     }else if(s.cataloged&&s.varAmp>0){
-      cx2.fillStyle="#e4573d";cx2.fillText("VAR",x+9,y-8);
+      cx2.fillStyle=pal.apVar;cx2.fillText("✕ VAR",x+9,y-8);
     }else if(s.cataloged&&s.varAmp===0&&s.V-t.V>=-0.5&&s.V-t.V<=1.5){
-      cx2.fillStyle="#6fd3e0";cx2.fillText("comp",x+9,y-8);
+      cx2.fillStyle=pal.apComp;cx2.fillText("○ comp",x+9,y-8);
     }
   }
 }
@@ -1243,12 +1348,14 @@ function apPx(s){
   return{x:cam.width/2-dra*CAM_PX_PER_ARCSEC, y:cam.height/2-dde*CAM_PX_PER_ARCSEC};
 }
 function drawApertures(){
-  for(const[key,color,label]of[["T","#ffb454","T"],["C1","#6fd3e0","C1"],["C2","#6fd3e0","C2"]]){
+  for(const[key,ckey,label,dash]of[["T","apT","T",[]],["C1","apC","C1",[5,3]],["C2","apC","C2",[5,3]]]){
     const s=st.ap[key];if(!s)continue;
     const p=apPx(s);
-    cx2.strokeStyle=color;cx2.lineWidth=1.5;
+    cx2.strokeStyle=pal[ckey];cx2.lineWidth=1.5;
+    cx2.setLineDash(dash);
     cx2.beginPath();cx2.arc(p.x,p.y,16,0,2*Math.PI);cx2.stroke();
-    cx2.fillStyle=color;cx2.font="11px 'IBM Plex Mono'";
+    cx2.setLineDash([]);
+    cx2.fillStyle=pal[ckey];cx2.font="11px 'IBM Plex Mono'";
     cx2.fillText(label,p.x+18,p.y-11);
   }
 }
@@ -1271,6 +1378,20 @@ function clearApertures(silent){
   refreshApRows();
   if(silent!==true)status("camStatus","Apertures cleared.");
 }
+/* shared placement path for both mouse-click and keyboard selection */
+function placeAperture(best){
+  if(!best)return;
+  if(!st.assignMode){status("camStatus","Press Target, Comp 1, or Comp 2 first, then choose a star.");return;}
+  for(const k of["T","C1","C2"])if(k!==st.assignMode&&st.ap[k]===best)st.ap[k]=null;
+  st.ap[st.assignMode]=best;
+  if(st.assignMode!=="T"&&best.kind==="host")
+    warn("camWarn","That comparison star is the transit target itself — it will not be constant!");
+  const who=st.assignMode;st.assignMode=null;
+  ["asgT","asgC1","asgC2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  refreshApRows();
+  status("camStatus",labelOf(who)+" aperture placed on "+(best.id||("star V="+best.V.toFixed(1)))+".");
+  planChanged();
+}
 cam.addEventListener("click",e=>{
   if(!st.assignMode||st.camMode!=="test"||st.capturing||seq.running)return;
   if(st.testImg&&st.testImg.trailed){status("camStatus","This image is trailed — retake it with tracking on before placing apertures.");return;}
@@ -1283,16 +1404,103 @@ cam.addEventListener("click",e=>{
     if(d<bd){bd=d;best=fs.ref;}
   }
   if(!best||bd>20){status("camStatus","No star there — click closer to a star image.");return;}
-  for(const k of["T","C1","C2"])if(k!==st.assignMode&&st.ap[k]===best)st.ap[k]=null;
-  st.ap[st.assignMode]=best;
-  if(st.assignMode!=="T"&&best.kind==="host")
-    warn("camWarn","That comparison star is the transit target itself — it will not be constant!");
-  const who=st.assignMode;st.assignMode=null;
-  ["asgT","asgC1","asgC2"].forEach(id=>document.getElementById(id).classList.remove("on"));
-  refreshApRows();
-  status("camStatus",labelOf(who)+" aperture placed on "+(best.id||("star V="+best.V.toFixed(1)))+".");
-  planChanged();
+  placeAperture(best);
 });
+
+/* ---- keyboard star navigation on the CCD image (WCAG 2.1.1) ----
+   The canvas is a focusable element (tabindex 0). While it holds keyboard
+   focus, a highlight ring sits on one star; arrow keys move it to the
+   nearest star in that direction, Enter/Space places the currently-selected
+   aperture. Mouse users never see any of this — it appears only on focus. */
+let kbStar=null;                       // the star reference currently highlighted
+function kbStars(){                     // stars available to navigate on the frozen test frame
+  return (st.testImg&&!st.testImg.trailed)?st.testImg.stars.map(fs=>fs.ref):[];
+}
+function kbAnnounce(){
+  if(!kbStar)return;
+  const t=selTarget();
+  let role="";
+  if(kbStar===t.hostStar)role=" — program target";
+  else if(kbStar.cataloged&&kbStar.varAmp>0)role=" — known variable, avoid";
+  else if(kbStar.cataloged&&kbStar.varAmp===0&&kbStar.V-t.V>=-0.5&&kbStar.V-t.V<=1.5)role=" — suggested comparison";
+  const name=kbStar.id||("star V="+kbStar.V.toFixed(1));
+  status("camStatus","Highlighted "+name+role+". Arrow keys move between stars; Enter places the "
+    +(st.assignMode?labelOf(st.assignMode):"selected")+" aperture.");
+}
+function kbMove(dx,dy){
+  const stars=kbStars();
+  if(!stars.length)return;
+  if(!kbStar){ // first move: nearest to image center
+    let best=null,bd=1e9;
+    for(const s of stars){const p=apPx(s);const d=Math.hypot(p.x-cam.width/2,p.y-cam.height/2);
+      if(d<bd){bd=d;best=s;}}
+    kbStar=best;kbAnnounce();return;
+  }
+  const o=apPx(kbStar);
+  let best=null,bscore=1e18;
+  for(const s of stars){
+    if(s===kbStar)continue;
+    const p=apPx(s),vx=p.x-o.x,vy=p.y-o.y;
+    const along=vx*dx+vy*dy;                       // projection onto the requested direction
+    if(along<=2)continue;                          // must be genuinely in that direction
+    const perp=Math.abs(vx*dy-vy*dx);
+    const score=along+perp*3;                      // prefer close & well-aligned
+    if(score<bscore){bscore=score;best=s;}
+  }
+  if(best){kbStar=best;kbAnnounce();}
+}
+cam.addEventListener("keydown",e=>{
+  if(st.camMode!=="test"||st.capturing||seq.running)return;
+  if(st.testImg&&st.testImg.trailed)return;
+  const K=e.key;
+  if(K==="ArrowUp"){e.preventDefault();kbMove(0,-1);}
+  else if(K==="ArrowDown"){e.preventDefault();kbMove(0,1);}
+  else if(K==="ArrowLeft"){e.preventDefault();kbMove(-1,0);}
+  else if(K==="ArrowRight"){e.preventDefault();kbMove(1,0);}
+  else if(K==="Enter"||K===" "){
+    e.preventDefault();
+    if(!kbStar)kbMove(0,0);          // land on a star first if none selected
+    else if(!st.assignMode)status("camStatus","Press Target, Comp 1, or Comp 2 first, then press Enter on a star.");
+    else placeAperture(kbStar);
+  }
+});
+cam.addEventListener("focus",()=>{
+  if(st.camMode==="test"&&!(st.testImg&&st.testImg.trailed))
+    status("camStatus","CCD image focused. Arrow keys move between stars; press Target, Comp 1, or Comp 2, then Enter to place an aperture. (Mouse: click a star.)");
+});
+cam.addEventListener("blur",()=>{kbStar=null;});
+/* ---- accessibility-mode assist: place all three apertures in one press ----
+   Assigns the target to the cataloged host and the two comparison apertures to
+   the best stable, similar-brightness, non-saturating catalog stars — the same
+   stars the "comp" labels point to. Serves anyone for whom placing three
+   apertures by fine pointing is the barrier. Leaves no trace in the report. */
+function assistPlaceApertures(){
+  if(seq.running)return;
+  if(st.domeAnim<0.98||st.slew){status("camStatus","Open the dome and finish slewing before using the assist.");return;}
+  const im=st.testImg,sec=+document.getElementById("expSec").value;
+  if(!im||im.trailed||im.filter!==st.filter||im.sec!==sec){
+    status("camStatus","Take a test image at this filter and exposure first, then use the assist.");return;}
+  const t=selTarget();
+  const onDetector=new Set(im.stars.map(fs=>fs.ref));
+  if(!onDetector.has(t.hostStar)){status("camStatus","The program target is not on the detector — check the pointing, then retake the test image.");return;}
+  /* candidate comps: cataloged, non-variable, similar brightness, not saturating */
+  const cand=im.stars.map(fs=>fs.ref).filter(s=>
+    s!==t.hostStar && s.cataloged && s.varAmp===0 &&
+    s.V-t.V>=-0.5 && s.V-t.V<=1.5 &&
+    rateOf(s,st.filter)*sec<=SAT_PER_EXP)
+    .sort((a,b)=>Math.abs(a.V-t.V)-Math.abs(b.V-t.V));   // closest in brightness first
+  if(cand.length<2){status("camStatus","The assist couldn't find two suitable comparison stars in this field at this exposure — try a longer exposure or place them by hand.");return;}
+  st.ap.T=t.hostStar; st.ap.C1=cand[0]; st.ap.C2=cand[1];
+  st.assignMode=null;
+  ["asgT","asgC1","asgC2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  warn("camWarn","");
+  refreshApRows();
+  planChanged();
+  status("camStatus","Assist placed all three apertures: target on "+t.host+", comparisons on "
+    +(cand[0].id||"a similar star")+" and "+(cand[1].id||"a similar star")
+    +". Turn on the autoguider and start the sequence.");
+}
+
 function refreshApRows(){["T","C1","C2"].forEach(refreshApRow);}
 function refreshApRow(which){
   const row=document.getElementById(which==="T"?"rowT":which==="C1"?"rowC1":"rowC2");
@@ -1472,9 +1680,9 @@ function normalizePoints(pts){
 const lc=document.getElementById("liveCanvas"),lcx=lc.getContext("2d");
 function drawLive(){
   lcx.fillStyle="#0d1420";lcx.fillRect(0,0,lc.width,lc.height);
-  lcx.strokeStyle="#2a3546";lcx.strokeRect(0,0,lc.width,lc.height);
+  lcx.strokeStyle=pal.frame;lcx.strokeRect(0,0,lc.width,lc.height);
   const pts=seq.points;
-  lcx.fillStyle="#7d8aa0";lcx.font="11px 'IBM Plex Mono'";
+  lcx.fillStyle=pal.lcText;lcx.font="11px 'IBM Plex Mono'";
   if(!seq.running&&!pts.length){lcx.fillText("relative flux — waiting for a sequence",10,18);return;}
   if(!pts.length){lcx.fillText("relative flux — waiting for the first exposures",10,18);return;}
   const durH=seq.simH;
@@ -1484,9 +1692,9 @@ function drawLive(){
   lo=Math.min(lo,med*0.995);hi=Math.max(hi,med*1.004);
   const pad=0.15*(hi-lo);lo-=pad;hi+=pad;
   const X=t=>8+(t/durH)*(lc.width-16), Y=v=>lc.height-14-((v-lo)/(hi-lo))*(lc.height-30);
-  lcx.fillStyle="#7ee29a";
+  lcx.fillStyle=pal.lcPoint;
   for(const p of pts){lcx.fillRect(X(p.t)-1,Y(p.rel)-1,2.4,2.4);}
-  lcx.fillStyle="#7d8aa0";
+  lcx.fillStyle=pal.lcText;
   lcx.fillText("relative flux (target / comps) · "+pts.length+" points",10,14);
   lcx.fillText("UT "+fmtHM(seq.startUTh),8,lc.height-3);
   const endTxt="UT "+fmtHM(seq.startUTh+durH);
@@ -1566,7 +1774,7 @@ const rc=document.getElementById("resCanvas"),rcx=rc.getContext("2d");
 const AXL=56,AXB=26,AXT=10,AXR=10;
 function drawAxesBox(ctx,w,h){
   ctx.fillStyle="#0d1420";ctx.fillRect(0,0,w,h);
-  ctx.strokeStyle="#2a3546";ctx.strokeRect(AXL,AXT,w-AXL-AXR,h-AXT-AXB);
+  ctx.strokeStyle=pal.frame;ctx.strokeRect(AXL,AXT,w-AXL-AXR,h-AXT-AXB);
 }
 function drawFit(model){
   const pts=cur.points,durH=cur.durH;
@@ -1577,7 +1785,7 @@ function drawFit(model){
   drawAxesBox(fcx,W,H);
   const X=t=>AXL+(t/durH)*(W-AXL-AXR), Y=v=>H-AXB-((v-lo)/(hi-lo))*(H-AXT-AXB);
   /* x ticks in UT */
-  fcx.fillStyle="#7d8aa0";fcx.font="11px 'IBM Plex Mono'";fcx.strokeStyle="#1b2330";
+  fcx.fillStyle=pal.axis;fcx.font="11px 'IBM Plex Mono'";fcx.strokeStyle=pal.grid;
   const tickEvery=durH>4?1:0.5;
   for(let t=0;t<=durH+1e-9;t+=tickEvery){
     const x=X(t);
@@ -1595,22 +1803,22 @@ function drawFit(model){
   }
   fcx.fillText("UT →",W-AXR-34,H-9);
   /* error bars + points */
-  fcx.strokeStyle="rgba(126,226,154,0.28)";
+  fcx.strokeStyle=pal.errbar;
   for(const p of pts){
     const x=X(p.t);
     fcx.beginPath();fcx.moveTo(x,Y(p.rel-p.err));fcx.lineTo(x,Y(p.rel+p.err));fcx.stroke();
   }
-  fcx.fillStyle="#7ee29a";
+  fcx.fillStyle=pal.lcPoint;
   for(const p of pts)fcx.fillRect(X(p.t)-1.2,Y(p.rel)-1.2,2.8,2.8);
   /* model */
-  fcx.strokeStyle="#ffb454";fcx.lineWidth=1.8;
+  fcx.strokeStyle=pal.model;fcx.lineWidth=1.8;
   fcx.beginPath();
   for(let i=0;i<=420;i++){
     const t=durH*i/420,x=X(t),y=Y(model(t));
     i?fcx.lineTo(x,y):fcx.moveTo(x,y);
   }
   fcx.stroke();fcx.lineWidth=1;
-  fcx.fillStyle="#cdd6e4";fcx.font="12px 'IBM Plex Mono'";
+  fcx.fillStyle=pal.label;fcx.font="12px 'IBM Plex Mono'";
   fcx.fillText(cur.label,AXL+8,AXT+16);
   /* residuals */
   drawAxesBox(rcx,rc.width,rc.height);
@@ -1618,11 +1826,11 @@ function drawFit(model){
   const res=pts.map(p=>{const r=p.rel-model(p.t);rr=Math.max(rr,Math.abs(r));return r;});
   const rlim=Math.max(rr*1.15,0.004);
   const Xr=t=>AXL+(t/durH)*(rc.width-AXL-AXR), Yr=v=>rc.height/2-((v)/rlim)*(rc.height/2-AXT-6);
-  rcx.strokeStyle="#3a4658";
+  rcx.strokeStyle=pal.resAxis;
   rcx.beginPath();rcx.moveTo(AXL,rc.height/2);rcx.lineTo(rc.width-AXR,rc.height/2);rcx.stroke();
-  rcx.fillStyle="#6fd3e0";
+  rcx.fillStyle=pal.resPoint;
   pts.forEach((p,i)=>rcx.fillRect(Xr(p.t)-1,Yr(res[i])-1,2.4,2.4));
-  rcx.fillStyle="#7d8aa0";rcx.font="11px 'IBM Plex Mono'";
+  rcx.fillStyle=pal.axis;rcx.font="11px 'IBM Plex Mono'";
   rcx.fillText("residuals (data − model) · ±"+(rlim*1085.7).toFixed(1)+" mmag full scale",AXL+8,AXT+12);
 }
 /* ---------------- results log: saved fits ---------------- */
@@ -1902,8 +2110,9 @@ function frame(now){
     b.addEventListener("pointerdown",down);
     window.addEventListener("pointerup",up);
     b.addEventListener("pointerleave",up);
-    b.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter")st.moveDir=b.dataset.dir;});
+    b.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();st.moveDir=b.dataset.dir;}});
     b.addEventListener("keyup",up);
+    b.addEventListener("blur",up);          // safety stop: never leave the telescope slewing
   });
   ["sMid","sDep","sDur","sBas"].forEach(id=>grabOnly(document.getElementById(id)));
   setInterval(seqPump,2000);                              // keeps the run alive in background tabs
@@ -1916,6 +2125,15 @@ function frame(now){
   refreshDsSel();
   drawLive();
   setEnabled();
+  /* accessibility mode: honor a stored preference (new key, legacy fallback),
+     else auto-enable when the OS asks for more contrast */
+  let hcOn=false;
+  try{
+    const v=localStorage.getItem("oeo-a11y")??localStorage.getItem("oeo-hc");
+    if(v!==null)hcOn=(v==="1");
+    else if(window.matchMedia)hcOn=matchMedia("(prefers-contrast: more)").matches;
+  }catch(e){}
+  setContrast(hcOn,true);
   requestAnimationFrame(frame);
 })();
 </script>
