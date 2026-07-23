@@ -84,6 +84,9 @@
   #atlasList li,#lineList li{font-family:var(--mono);font-size:13px;padding:5px 10px;cursor:pointer;border-bottom:1px solid #10151f;color:var(--text)}
   #atlasList li:hover,#lineList li:hover{background:#232d3e}
   #atlasList li.sel,#lineList li.sel{background:var(--amber);color:var(--night);font-weight:600}
+  #atlasList li:focus-visible,#lineList li:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+  body.hc #atlasList li:focus-visible,body.hc #lineList li:focus-visible{outline:3px solid #ffe95a;outline-offset:-3px}
+  #atlasList:focus,#lineList:focus{outline:none}
   #lineList li span{color:var(--text-dim);float:right}
   #zoomCanvas{background:#04121a;border:1px solid var(--line);border-radius:4px;width:100%;display:block;cursor:crosshair}
   .atlas-badge{font-family:var(--mono);font-size:11px;padding:3px 7px;border-radius:3px;display:inline-block;margin-top:8px;line-height:1.4}
@@ -107,6 +110,22 @@
     .cls-grid{grid-template-columns:1fr;grid-template-areas:"unk" "main" "side" "analysis" "cursor"}
   }
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+  /* ---------- ACCESSIBILITY (portable block) ---------- */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .hdr-util{flex-basis:100%;display:flex;justify-content:flex-end;margin-top:2px}
+  #hcBtn{font-size:11px;padding:3px 9px}
+  body.hc{--text:#eef3fa;--text-dim:#b7c3d6;--line:#4d5f7a;--amber:#ffd21f;
+    --cyan:#9fe8f5;--green:#8df0a8;--red:#ff8a70;--amber-dim:#b89a3a}
+  body.hc .readout{text-shadow:none}
+  body.hc .readout.green{text-shadow:none}
+  body.hc button.ctrl{border-color:#5d7292}
+  body.hc button.ctrl:focus-visible,body.hc nav button:focus-visible,
+  body.hc select:focus-visible,body.hc input:focus-visible,body.hc nav a.navlink:focus-visible{
+    outline:3px solid #ffe95a;outline-offset:2px}
+  body.hc .hint{color:#b7c3d6}
+  #assistBtn{display:none;width:100%;margin-top:6px}
+  body.hc #assistBtn{display:block}
 </style>
 </head>
 <body>
@@ -118,12 +137,16 @@
     <button id="tabObs" class="active" onclick="showScreen('obs')">Observatory</button>
     <button id="tabCls" onclick="showScreen('cls')">Classify Spectra</button>
     <button id="tabInfo" onclick="showScreen('info')">Information</button>
-    <a class="navlink" id="homeLink" href="../">Homepage</a>
+    <a class="navlink" id="homeLink" href="../" onclick="confirmLeave(event)">Homepage</a>
   </nav>
+  <div class="hdr-util">
+    <button class="ctrl" id="hcBtn" onclick="toggleContrast()" aria-pressed="false"> Accessibility Mode: OFF </button>
+  </div>
 </header>
 
 <!-- ============ OBSERVATORY ============ -->
 <section id="scr-obs" class="screen active">
+  <h2 class="sr-only">Observatory</h2>
   <div class="clock-row">
     <div><span class="lbl">Universal Time</span><span class="readout big" id="utClock">--:--:--</span></div>
     <div><span class="lbl">Local Sidereal Time</span><span class="readout big" id="lstClock">--:--:--</span></div>
@@ -134,7 +157,7 @@
   <div class="obs-grid">
     <div id="obsTv">
       <div class="tv-wrap">
-        <canvas id="tvCanvas" width="640" height="560"></canvas>
+        <canvas id="tvCanvas" width="640" height="560" role="img" aria-label="Telescope TV camera view of the sky. The coordinate readouts below report the current pointing, and the Nearest object readout names the star at the slit."></canvas>
         <div class="tv-tag">TV CAMERA · N&nbsp;up · E&nbsp;left · <b id="fovTag">FINDER 2.5°</b></div>
       </div>
       <div class="coord-row">
@@ -146,7 +169,7 @@
 
       <div id="specPanel" class="panel">
         <h3>Photon-Counting Spectrometer · 3700–4700 Å</h3>
-        <canvas id="specCanvas" width="720" height="240"></canvas>
+        <canvas id="specCanvas" width="720" height="240" role="img" aria-label="Live spectrometer display. The photon count, integration time, and signal-to-noise readouts below report its state as text."></canvas>
         <div class="spec-stats">
           <div><span class="lbl">Photon count</span><span class="readout" id="phCount">0</span></div>
           <div><span class="lbl">Photons / channel</span><span class="readout" id="phChan">0.0</span></div>
@@ -158,7 +181,7 @@
             <button class="ctrl" id="saveBtn" onclick="saveSpectrum()" disabled>Save spectrum</button>
           </div>
         </div>
-        <div class="statusline" id="specStatus">Open the dome, turn on tracking, and center a star between the slit jaws.</div>
+        <div class="statusline" id="specStatus" role="status" aria-live="polite">Open the dome, turn on tracking, and center a star between the slit jaws.</div>
       </div>
 
       <div class="panel" id="domePanel">
@@ -186,9 +209,9 @@
       <div class="panel">
         <h3>Telescope Motion</h3>
         <div class="nsew">
-          <button class="blank"></button><button class="ctrl" data-dir="N">N</button><button class="blank"></button>
-          <button class="ctrl" data-dir="E">E</button><button class="blank"></button><button class="ctrl" data-dir="W">W</button>
-          <button class="blank"></button><button class="ctrl" data-dir="S">S</button><button class="blank"></button>
+          <button class="blank"></button><button class="ctrl" data-dir="N" aria-label="Slew north (hold Enter or Space)">N</button><button class="blank"></button>
+          <button class="ctrl" data-dir="E" aria-label="Slew east (hold Enter or Space)">E</button><button class="blank"></button><button class="ctrl" data-dir="W" aria-label="Slew west (hold Enter or Space)">W</button>
+          <button class="blank"></button><button class="ctrl" data-dir="S" aria-label="Slew south (hold Enter or Space)">S</button><button class="blank"></button>
         </div>
         <div class="row spread">
           <span class="lbl" style="margin:0">Slew rate</span>
@@ -197,11 +220,12 @@
             <option value="8" selected>8×</option><option value="16">16×</option>
           </select>
         </div>
+        <button class="ctrl" id="assistBtn" onclick="assistCenter()">Assist: center / next star</button>
       </div>
 
       <div class="panel">
         <h3>Target List · Program Stars</h3>
-        <select id="hotSel" style="width:100%" aria-label="Hot list"></select>
+        <select id="hotSel" style="width:100%" aria-label="Target list"></select>
         <div class="row" style="margin-top:8px">
           <button class="ctrl" id="slewBtn" onclick="slewToHot()" style="flex:1">Slew to object</button>
         </div>
@@ -218,6 +242,7 @@
 
 <!-- ============ CLASSIFICATION ============ -->
 <section id="scr-cls" class="screen">
+  <h2 class="sr-only">Classify Spectra</h2>
   <div class="cls-grid">
     <div class="panel" id="unknownPanel">
       <h3>Unknown Spectrum</h3>
@@ -226,7 +251,7 @@
     </div>
 
     <div id="clsMain">
-      <canvas id="clsCanvas" width="760" height="560"></canvas>
+      <canvas id="clsCanvas" width="760" height="560" role="img" aria-label="Three stacked spectra: the selected atlas standard on top, your unknown in the middle, and their difference at the bottom. Click a point to read its wavelength and intensity in the readouts below; the same values are available there as text."></canvas>
       <p class="hint">Top: the selected atlas standard. Middle: your unknown. Bottom: the difference (standard − unknown).
         Step through the atlas until the difference trace flattens — that bracket is your classification.
         Click any trace to read λ and intensity.</p>
@@ -237,27 +262,10 @@
       <div><span class="lbl">Intensity</span><span class="readout" id="curInt">-.---</span></div>
     </div>
 
-      <div class="panel" id="analysisPanel">
-        <h3>Analysis · Zoom &amp; Equivalent Width</h3>
-        <canvas id="zoomCanvas" width="760" height="340"></canvas>
-        <div class="row" style="margin-top:8px">
-          <button class="ctrl" onclick="azZoom(0.6)">Zoom in</button>
-          <button class="ctrl" onclick="azZoom(1/0.6)">Zoom out</button>
-          <button class="ctrl" onclick="azPan(-1)">◀ Pan</button>
-          <button class="ctrl" onclick="azPan(1)">Pan ▶</button>
-          <button class="ctrl" onclick="azReset()">Reset</button>
-          <label class="hint" style="margin:0;display:flex;align-items:center;gap:6px">
-            <input type="checkbox" id="lineChk" onchange="drawZoom()"> all line IDs</label>
-          <button class="ctrl" id="ewBtn" onclick="toggleEW()" style="margin-left:auto">Measure EW</button>
-          <button class="ctrl" onclick="clearEW()">Clear</button>
-        </div>
-        <div class="statusline" id="ewOut">Zoom into a line, press “Measure EW”, then click the continuum on the left and right shoulders of the line.</div>
-      </div>
-
     <div class="stack" id="clsSide">
       <div class="panel">
         <h3>Atlas · Main Sequence</h3>
-        <ul id="atlasList"></ul>
+        <ul id="atlasList" role="listbox" tabindex="-1" aria-label="Atlas standard spectrum — use arrow keys to choose"></ul>
         <div class="atlas-badge synth" id="atlasBadge">Standards: synthetic models</div>
         <div class="row" style="margin-top:8px">
           <button class="ctrl" id="atlasToggleBtn" style="flex:1" onclick="toggleAtlasSource()" disabled>Use full set</button>
@@ -278,10 +286,43 @@
       </div>
       <div class="panel">
         <h3>Spectral Lines</h3>
-        <ul id="lineList"></ul>
+        <ul id="lineList" role="listbox" tabindex="-1" aria-label="Spectral line to mark — use arrow keys to choose"></ul>
         <div class="hint" id="lineHelp" style="min-height:34px">Wavelengths are in Ångstroms (Å). Click a line to center the analysis window on it and read its description.</div>
       </div>
     </div>
+
+      <div class="panel" id="analysisPanel">
+        <h3>Analysis · Zoom &amp; Equivalent Width</h3>
+        <canvas id="zoomCanvas" width="760" height="340" role="img" aria-label="Zoomed view of your unknown spectrum for line identification and equivalent-width measurement. As a full keyboard alternative to clicking, wavelengths can be typed into the cursor and shoulder boxes below. The cursor wavelength, intensity, and any measured equivalent width are reported as text in the readouts below this panel."></canvas>
+        <div class="row" style="margin-top:8px">
+          <button class="ctrl" onclick="azZoom(0.6)">Zoom in</button>
+          <button class="ctrl" onclick="azZoom(1/0.6)">Zoom out</button>
+          <button class="ctrl" onclick="azPan(-1)">◀ Pan</button>
+          <button class="ctrl" onclick="azPan(1)">Pan ▶</button>
+          <button class="ctrl" onclick="azReset()">Reset</button>
+          <label class="hint" style="margin:0;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="lineChk" onchange="drawZoom()"> all line IDs</label>
+          <button class="ctrl" id="ewBtn" onclick="toggleEW()" style="margin-left:auto">Measure EW</button>
+          <button class="ctrl" onclick="clearEW()">Clear</button>
+        </div>
+        <div class="row" id="kbdMeasure" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div><span class="lbl">Cursor λ (Å)</span>
+            <input type="number" id="curWlInput" step="1" min="3700" max="4700"
+              style="width:88px" aria-label="Cursor wavelength in Ångströms"
+              onchange="setCursorWl(this.value)"></div>
+          <div><span class="lbl">EW left shoulder λ</span>
+            <input type="number" id="sh1Input" step="1" min="3700" max="4700"
+              style="width:88px" aria-label="Equivalent-width left shoulder wavelength"></div>
+          <div><span class="lbl">EW right shoulder λ</span>
+            <input type="number" id="sh2Input" step="1" min="3700" max="4700"
+              style="width:88px" aria-label="Equivalent-width right shoulder wavelength"></div>
+          <button class="ctrl" onclick="measureEWfromInputs()">Measure from boxes</button>
+        </div>
+        <p class="hint">Mouse: click the plot to read λ, or press Measure EW and click each shoulder.
+          Keyboard: type wavelengths above — a full alternative to clicking.</p>
+        <div class="statusline" id="ewOut" role="status" aria-live="polite">Zoom into a line, press “Measure EW”, then click the continuum on the left and right shoulders of the line.</div>
+      </div>
+
   </div>
 </section>
 
@@ -296,7 +337,7 @@
        browser with no installation.</p>
 
     <h2>The exercise, briefly</h2>
-    <p>1. Open the dome and slew to a program star from the hot list (tracking engages on arrival). Long slews
+    <p>1. Open the dome and slew to a program star from the target list (tracking engages on arrival). Long slews
        land close to — but rarely exactly on — the target, so switch to the <b>Telescope</b> view and use the
        N/E/S/W controls to center the star between the slit jaws. 2. Press <b>Go</b> and watch photons
        accumulate; the dots resolve into a spectrum as counts build. Integrate to S/N ≳ 15–20 for rough
@@ -333,6 +374,25 @@
        spectra on one continuum system; line profiles — everything classification depends on — are untouched.
        Anyone wanting the original spectrophotometry should use the STScI files directly. If the atlas file is
        absent, the activity falls back to self-consistent synthetic standards and says so in the interface.</p>
+
+    <h2>Accessibility</h2>
+    <p>This activity aims to conform to <b>WCAG 2.1 Level AA</b>. All measurements, readouts, tables, and
+       equations are real HTML text available to screen readers and browser zoom; the canvas graphics carry
+       text alternatives, and the spectrometer and equivalent-width status lines announce their updates. Every
+       control is keyboard-operable, including the telescope: focus a direction button and hold Enter or Space
+       to slew. The crosshair measurement has a full keyboard alternative — cursor and equivalent-width shoulder
+       wavelengths can be typed directly into the boxes beneath the analysis plot. Classification never depends
+       on color — the standard, unknown, and difference spectra sit in separate labeled panels, and the selected
+       diagnostic line is drawn solid while others are dashed. The atlas and spectral-line lists are keyboard
+       listboxes — Tab to them, then use the arrow keys (and Home/End) to change the standard or mark a line. An
+       <b>accessibility mode</b> (toggle below the page header; enabled automatically if your system requests
+       increased contrast) brightens the interface and restyles every chart overlay — the slit, line markers,
+       and equivalent-width guides — in a higher-contrast, colorblind-safer palette. Enabling it also reveals a
+       <b>centering assist</b> button on the Observatory page that places the spectrometer slit exactly on a
+       star in the current field, cycling to the next with each press so every star is reachable without
+       fine slewing; using it leaves no mark in the session report. The observing task is intrinsically visual
+       in places; if any part of this activity presents a barrier these accommodations don't resolve, students
+       should contact their instructor, and issues can be reported through the project repository.</p>
 
     <h2>Credit &amp; lineage</h2>
     <p>The aim of this project is to give students a realistic experience of controlling a telescope and
@@ -395,6 +455,52 @@ function fmtDMS(deg){
   const D=Math.floor(deg),m=(deg-D)*60,M=Math.floor(m),S=Math.round((m-M)*60);
   return sign+String(D).padStart(2,"0")+"°"+String(M).padStart(2,"0")+"′"+String(S).padStart(2,"0")+"″";
 }
+
+/* ---------------- ACCESSIBILITY: canvas palettes (portable block) ------------
+   All interface overlays drawn on canvases take their colors from `pal`, so the
+   high-contrast toggle restyles them; the sky itself (stars, dome) is content
+   and stays photorealistic in both modes. Diagnostic overlays also carry a
+   redundant non-color cue (line dash) so they never depend on color alone. */
+const PAL={
+  normal:{
+    bgTV:"#000", bgSpec:"#04121a", bgCls:"#0d1420", bgZoom:"#04121a",
+    frame:"#123240", frameCls:"#1d2a3d", grid:"#123240",
+    axis:"#3f7d8c", axisCls:"#3f5a78", dim:"#54637c",
+    spec:"#6fd3e0", stdTrace:"#9fb6d8", unkTrace:"#6fd3e0", diffTrace:"#e4573d",
+    slit:"rgba(228,87,61,.95)", box:"rgba(228,87,61,.9)",
+    slewText:"#6fd3e0", slewSub:"#3f7d8c", slewScan:"rgba(111,211,224,.08)",
+    domePanel:"#11151d", domeEdge:"#232d3e", domeRivet:"#1b2330", domeText:"#54637c",
+    lineSel:"#ffb454", lineDim:"#8a6430", lineSelStroke:"rgba(255,180,84,.95)", lineDimStroke:"rgba(255,180,84,.30)",
+    ewFill:"rgba(228,87,61,.20)", ewCont:"rgba(126,226,154,.9)", ewCenter:"#e4573d",
+    cursor:"rgba(255,180,84,.75)", cursorCls:"rgba(255,180,84,.7)",
+    zoomBand:"rgba(255,180,84,.07)", zoomBandStroke:"rgba(255,180,84,.45)",
+  },
+  hc:{
+    bgTV:"#000", bgSpec:"#02090f", bgCls:"#070c14", bgZoom:"#02090f",
+    frame:"#4d5f7a", frameCls:"#4d5f7a", grid:"#26364a",
+    axis:"#bfe3ef", axisCls:"#bfe3ef", dim:"#9fb0c6",
+    spec:"#a5eefb", stdTrace:"#cfe0f5", unkTrace:"#a5eefb", diffTrace:"#ff8a70",
+    slit:"rgba(255,236,80,1)", box:"rgba(255,236,80,.95)",
+    slewText:"#a5eefb", slewSub:"#9fb0c6", slewScan:"rgba(180,240,252,.10)",
+    domePanel:"#1a2130", domeEdge:"#4d5f7a", domeRivet:"#3a4657", domeText:"#b7c3d6",
+    lineSel:"#ffd21f", lineDim:"#b89a3a", lineSelStroke:"rgba(255,236,80,1)", lineDimStroke:"rgba(255,236,80,.5)",
+    ewFill:"rgba(255,138,112,.28)", ewCont:"rgba(141,240,168,1)", ewCenter:"#ff8a70",
+    cursor:"rgba(255,236,80,1)", cursorCls:"rgba(255,236,80,1)",
+    zoomBand:"rgba(255,236,80,.12)", zoomBandStroke:"rgba(255,236,80,.6)",
+  },
+};
+let pal=PAL.normal;
+function setContrast(on,skipStore){
+  document.body.classList.toggle("hc",on);
+  pal=on?PAL.hc:PAL.normal;
+  const b=document.getElementById("hcBtn");
+  b.textContent="Accessibility Mode: "+(on?"ON":"OFF");
+  b.setAttribute("aria-pressed",on?"true":"false");
+  b.classList.toggle("on",on);
+  if(!skipStore){try{localStorage.setItem("oeo-a11y",on?"1":"0");}catch(e){}}
+  if(typeof drawTV==="function"){drawTV();drawSpec();drawCls();drawZoom();}
+}
+function toggleContrast(){setContrast(!document.body.classList.contains("hc"));}
 
 /* ---------------- spectral scale & synthesis ---------------- */
 const TYPE_LETTERS=["O","B","A","F","G","K","M"];
@@ -738,10 +844,10 @@ function drawTV(){
     }
     if(st.view==="finder"){
       const box=(0.25/fov)*H;
-      tvx.strokeStyle="rgba(228,87,61,.9)";tvx.lineWidth=1;
+      tvx.strokeStyle=pal.box;tvx.lineWidth=1;
       tvx.strokeRect(W/2-box/2,H/2-box/2,box,box);
     }else{
-      tvx.strokeStyle="rgba(228,87,61,.95)";tvx.lineWidth=2;tvx.beginPath();
+      tvx.strokeStyle=pal.slit;tvx.lineWidth=2;tvx.beginPath();
       tvx.moveTo(W/2-7,H/2-26);tvx.lineTo(W/2-7,H/2+26);
       tvx.moveTo(W/2+7,H/2-26);tvx.lineTo(W/2+7,H/2+26);tvx.stroke();
     }
@@ -749,12 +855,12 @@ function drawTV(){
 
   if(transit){
     tvx.fillStyle="#02050a";tvx.fillRect(0,0,W,H);
-    tvx.strokeStyle="rgba(111,211,224,.08)";
+    tvx.strokeStyle=pal.slewScan;
     for(let y=0;y<H;y+=4){tvx.beginPath();tvx.moveTo(0,y);tvx.lineTo(W,y);tvx.stroke();}
-    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle="#6fd3e0";tvx.textAlign="center";
+    tvx.font="600 22px 'Rajdhani'";tvx.fillStyle=pal.slewText;tvx.textAlign="center";
     const dots=".".repeat(1+Math.floor(performance.now()/400)%3);
     tvx.fillText("SLEWING TO "+st.slew.targetName.toUpperCase()+dots,W/2,H/2-8);
-    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle="#3f7d8c";
+    tvx.font="13px 'IBM Plex Mono'";tvx.fillStyle=pal.slewSub;
     tvx.fillText("telescope in motion — camera blanked",W/2,H/2+18);
     tvx.textAlign="left";
   }
@@ -762,13 +868,13 @@ function drawTV(){
   /* dome shutters slide apart from the center */
   if(domeOpen<0.995){
     const gap=(W/2)*domeOpen;
-    tvx.fillStyle="#11151d";
+    tvx.fillStyle=pal.domePanel;
     tvx.fillRect(0,0,W/2-gap,H); tvx.fillRect(W/2+gap,0,W/2-gap,H);
-    tvx.strokeStyle="#232d3e";tvx.lineWidth=2;
+    tvx.strokeStyle=pal.domeEdge;tvx.lineWidth=2;
     tvx.beginPath();tvx.moveTo(W/2-gap,0);tvx.lineTo(W/2-gap,H);
     tvx.moveTo(W/2+gap,0);tvx.lineTo(W/2+gap,H);tvx.stroke();
     // rivet texture
-    tvx.fillStyle="#1b2330";
+    tvx.fillStyle=pal.domeRivet;
     for(let y=20;y<H;y+=48){
       if(W/2-gap>24)tvx.fillRect(18,y,4,4);
       if(W/2-gap>24)tvx.fillRect(W/2-gap-24,y,4,4);
@@ -776,7 +882,7 @@ function drawTV(){
       tvx.fillRect(W-24,y,4,4);
     }
     if(domeOpen<0.03){
-      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle="#54637c";tvx.textAlign="center";
+      tvx.font="600 20px 'Rajdhani'";tvx.fillStyle=pal.domeText;tvx.textAlign="center";
       tvx.fillText("DOME CLOSED",W/2,H/2);
       tvx.font="12px 'IBM Plex Mono'";
       tvx.fillText("open the dome to see the sky",W/2,H/2+22);
@@ -799,6 +905,39 @@ function objectInSlit(){
     if(d<bd){bd=d;best=s;}
   }
   return(best&&bd<tol)?best:null;
+}
+
+/* ---------------- ACCESSIBILITY: centering assist ----------------
+   A keyboard/one-click alternative to fine slewing. Places the slit exactly on
+   a star in the current field, cycling to the next with each press so every
+   star (program or field) is reachable without pixel-precise pointing. Visible
+   only in accessibility mode; leaves no trace in the session report. */
+function assistCenter(){
+  if(st.domeAnim<0.98||st.slew){
+    document.getElementById("specStatus").textContent="Open the dome (and wait for any slew) before using the centering assist.";return;}
+  const ra0=st.ra*15,dec0=st.dec,cosd=Math.cos(dec0*Math.PI/180);
+  const dist=s=>Math.hypot((s.raDeg-ra0)*cosd,(s.decDeg-dec0));
+  // stars within roughly a finder field of the current pointing, brightest first
+  const field=visibleStars(2.2).filter(s=>dist(s)<1.1)
+      .sort((a,b)=>a.mag-b.mag);
+  if(!field.length){
+    document.getElementById("specStatus").textContent="No star within the current field — slew toward a star first, or pick one from the target list.";return;}
+  const cur=objectInSlit();
+  const keyOf=s=>s.name||s.raDeg.toFixed(4)+","+s.decDeg.toFixed(4);
+  let target;
+  if(cur&&field.some(s=>keyOf(s)===keyOf(cur))){
+    const i=field.findIndex(s=>keyOf(s)===keyOf(cur));
+    target=field[(i+1)%field.length];        // advance the cycle
+  }else{
+    target=field[0];                          // first press: brightest in field
+  }
+  st.ra=target.raDeg/15;st.dec=target.decDeg;
+  if(st.view!=="telescope")toggleView();
+  const label=target.name||("field star V="+target.mag.toFixed(1));
+  const idx=field.findIndex(s=>keyOf(s)===keyOf(target))+1;
+  document.getElementById("specStatus").textContent=
+    "Centering assist: slit placed on "+label+" — star "+idx+" of "+field.length+
+    " in this field. Press Go to integrate, or Assist again for the next star.";
 }
 
 /* ---------------- dome / tracking / view controls ---------------- */
@@ -826,6 +965,11 @@ let slewDir=null;
 document.querySelectorAll(".nsew button[data-dir]").forEach(b=>{
   b.addEventListener("pointerdown",()=>{if(!st.slew)slewDir=b.dataset.dir;});
   window.addEventListener("pointerup",()=>{slewDir=null;});
+  // keyboard: focus a direction button and hold Enter or Space to slew
+  b.addEventListener("keydown",e=>{
+    if((e.key==="Enter"||e.key===" ")&&!st.slew){e.preventDefault();slewDir=b.dataset.dir;}});
+  b.addEventListener("keyup",e=>{if(e.key==="Enter"||e.key===" ")slewDir=null;});
+  b.addEventListener("blur",()=>{if(slewDir===b.dataset.dir)slewDir=null;});
 });
 
 /* ---------------- hot-list slew state machine ----------------
@@ -971,10 +1115,10 @@ function specTick(dt){
 }
 function drawSpec(){
   const W=sc.width,H=sc.height,pad=34;
-  scx.fillStyle="#04121a";scx.fillRect(0,0,W,H);
-  scx.strokeStyle="#123240";scx.lineWidth=1;
+  scx.fillStyle=pal.bgSpec;scx.fillRect(0,0,W,H);
+  scx.strokeStyle=pal.frame;scx.lineWidth=1;
   scx.strokeRect(pad,8,W-pad-8,H-30);
-  scx.fillStyle="#3f7d8c";scx.font="10px 'IBM Plex Mono'";
+  scx.fillStyle=pal.axis;scx.font="10px 'IBM Plex Mono'";
   for(let wl=3700;wl<=4700;wl+=100){
     const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-8);
     scx.fillText(wl,x-12,H-8);
@@ -984,7 +1128,7 @@ function drawSpec(){
   scx.fillText("REL. INTENSITY",-40,0);scx.restore();
   let mx=0;for(const v of spec.counts)mx=Math.max(mx,v);
   if(mx<=0)return;
-  scx.fillStyle="#6fd3e0";scx.strokeStyle="#6fd3e0";
+  scx.fillStyle=pal.spec;scx.strokeStyle=pal.spec;
   const y0=8,hgt=H-38;
   if(spec.running){
     for(let i=0;i<NCH;i++){
@@ -1096,21 +1240,58 @@ function loadUnknown(){
   if(typeof az!=="undefined"){az.sh1=null;az.sh2=null;az.result=null;az.cursor=null;cls.cursor=null;drawZoom();}
   drawCls();
 }
+/* Make a <ul role="listbox"> keyboard-navigable: Up/Down/Home/End move a roving
+   focus, Enter/Space (and focus-follows for arrows) activate via onSelect(i). */
+function wireListbox(ul,onSelect){
+  ul.addEventListener("keydown",e=>{
+    const opts=[...ul.querySelectorAll('[role="option"]')];
+    if(!opts.length)return;
+    let cur=opts.findIndex(o=>o===document.activeElement);
+    if(cur<0)cur=opts.findIndex(o=>o.classList.contains("sel"));
+    let next=cur;
+    if(e.key==="ArrowDown")next=Math.min(opts.length-1,cur+1);
+    else if(e.key==="ArrowUp")next=Math.max(0,cur-1);
+    else if(e.key==="Home")next=0;
+    else if(e.key==="End")next=opts.length-1;
+    else if(e.key==="Enter"||e.key===" "){e.preventDefault();if(cur>=0)onSelect(cur);return;}
+    else return;
+    e.preventDefault();
+    opts[next].focus();
+    onSelect(next);            // selection follows focus, standard listbox behavior
+  });
+}
 function buildAtlasUI(){
   const ul=document.getElementById("atlasList");
   ul.innerHTML="";
   atlas.forEach((a,i)=>{
     const li=document.createElement("li");
     li.textContent=a.label+(a.star?"  ·  "+a.star:"");
-    li.onclick=()=>{cls.stdIdx=i;drawCls();
-      ul.querySelectorAll("li").forEach(x=>x.classList.remove("sel"));li.classList.add("sel");};
-    if(i===cls.stdIdx)li.classList.add("sel");
+    li.setAttribute("role","option");
+    li.id="atlasOpt"+i;
+    const sel=i===cls.stdIdx;
+    li.setAttribute("aria-selected",sel?"true":"false");
+    li.tabIndex=sel?0:-1;                       // roving tabindex
+    if(sel)li.classList.add("sel");
+    li.onclick=()=>selectAtlas(i);
     ul.appendChild(li);
   });
+  ul.setAttribute("aria-activedescendant","atlasOpt"+cls.stdIdx);
   /* classification choices are restricted to the atlas types */
   const ts=document.getElementById("clsTypeSel");
   ts.innerHTML="";
   atlas.forEach(a=>ts.add(new Option(a.label,a.label)));
+}
+function selectAtlas(i){
+  cls.stdIdx=i;
+  const ul=document.getElementById("atlasList");
+  ul.querySelectorAll('[role="option"]').forEach((x,j)=>{
+    const on=j===i;
+    x.classList.toggle("sel",on);
+    x.setAttribute("aria-selected",on?"true":"false");
+    x.tabIndex=on?0:-1;
+  });
+  ul.setAttribute("aria-activedescendant","atlasOpt"+i);
+  drawCls();
 }
 function plotTrace(data,x0,y0,w,h,color,zeroLine){
   ccx.strokeStyle=color;ccx.lineWidth=1.1;ccx.beginPath();
@@ -1120,12 +1301,12 @@ function plotTrace(data,x0,y0,w,h,color,zeroLine){
     i?ccx.lineTo(x,y):ccx.moveTo(x,y);
   }
   ccx.stroke();
-  if(zeroLine){ccx.strokeStyle="#33465e";ccx.setLineDash([3,4]);
+  if(zeroLine){ccx.strokeStyle=pal.frameCls;ccx.setLineDash([3,4]);
     ccx.beginPath();ccx.moveTo(x0,y0+h/2);ccx.lineTo(x0+w,y0+h/2);ccx.stroke();ccx.setLineDash([]);}
 }
 function drawCls(){
   const W=cc.width,H=cc.height,pad=44,ph=(H-60)/3;
-  ccx.fillStyle="#0d1420";ccx.fillRect(0,0,W,H);
+  ccx.fillStyle=pal.bgCls;ccx.fillRect(0,0,W,H);
   ccx.font="11px 'IBM Plex Mono'";
   const std=atlas[cls.stdIdx];
   let diff=null;
@@ -1134,14 +1315,14 @@ function drawCls(){
     for(let i=0;i<NCH;i++)diff[i]=std.data[i]-cls.unknown.data[i];
   }
   const panels=[
-    {data:std.data,label:std.label+"  (standard)"+(std.star?"  ·  "+std.star:""),color:"#9fb6d8"},
-    {data:cls.unknown?cls.unknown.data:null,label:"UNKNOWN — "+(cls.unknown?cls.unknown.name:"none"),color:"#6fd3e0"},
-    {data:diff,label:"DIFFERENCE  ("+std.label+" − unknown)",color:"#e4573d",zero:true},
+    {data:std.data,label:std.label+"  (standard)"+(std.star?"  ·  "+std.star:""),color:pal.stdTrace},
+    {data:cls.unknown?cls.unknown.data:null,label:"UNKNOWN — "+(cls.unknown?cls.unknown.name:"none"),color:pal.unkTrace},
+    {data:diff,label:"DIFFERENCE  ("+std.label+" − unknown)",color:pal.diffTrace,zero:true},
   ];
   panels.forEach((p,k)=>{
     const y0=12+k*(ph+14);
-    ccx.strokeStyle="#1d2a3d";ccx.strokeRect(pad,y0,W-pad-10,ph);
-    ccx.fillStyle="#7d8aa0";ccx.fillText(p.label,pad+6,y0+13);
+    ccx.strokeStyle=pal.frameCls;ccx.strokeRect(pad,y0,W-pad-10,ph);
+    ccx.fillStyle=pal.dim;ccx.fillText(p.label,pad+6,y0+13);
     if(p.data)plotTrace(p.data,pad,y0,W-pad-10,ph,p.color,p.zero);
   });
   // highlight the analysis zoom window on the unknown (middle) panel
@@ -1149,17 +1330,17 @@ function drawCls(){
     const y0m=12+(ph+14);
     const x0=pad+(az.wl0-WL0)/(WL1-WL0)*(W-pad-10);
     const x1=pad+(az.wl1-WL0)/(WL1-WL0)*(W-pad-10);
-    ccx.fillStyle="rgba(255,180,84,.07)";ccx.fillRect(x0,y0m,x1-x0,ph);
-    ccx.strokeStyle="rgba(255,180,84,.45)";ccx.strokeRect(x0,y0m,x1-x0,ph);
+    ccx.fillStyle=pal.zoomBand;ccx.fillRect(x0,y0m,x1-x0,ph);
+    ccx.strokeStyle=pal.zoomBandStroke;ccx.strokeRect(x0,y0m,x1-x0,ph);
   }
-  ccx.fillStyle="#3f5a78";
+  ccx.fillStyle=pal.axisCls;
   for(let wl=3700;wl<=4700;wl+=100){
     const x=pad+(wl-WL0)/(WL1-WL0)*(W-pad-10);
     ccx.fillText(wl,x-12,H-6);
   }
   if(cls.cursor){
     const x=pad+(cls.cursor.wl-WL0)/(WL1-WL0)*(W-pad-10);
-    ccx.strokeStyle="rgba(255,180,84,.7)";
+    ccx.strokeStyle=pal.cursorCls;
     ccx.beginPath();ccx.moveTo(x,10);ccx.lineTo(x,H-20);ccx.stroke();
   }
 }
@@ -1378,14 +1559,39 @@ function computeEW(){
     (ew<0?"  (negative — emission, or a shoulder sits inside the line)":"");
   drawZoom();
 }
+
+/* ---- keyboard alternatives to the crosshair (accessibility) ----
+   Same code paths as the mouse handlers, driven by typed wavelengths. */
+function setCursorWl(v){
+  if(!cls.unknown){document.getElementById("ewOut").textContent="Load an unknown spectrum first.";return;}
+  let wl=parseFloat(v);
+  if(isNaN(wl)){return;}
+  wl=Math.max(WL0,Math.min(WL1,wl));
+  const i=idxOf(wl);
+  az.cursor=WL0+i*DWL;cls.cursor=null;
+  document.getElementById("curWl").textContent=(WL0+i*DWL).toFixed(1);
+  document.getElementById("curInt").textContent=cls.unknown.data[i].toFixed(3);
+  drawZoom();drawCls();
+}
+function measureEWfromInputs(){
+  if(!cls.unknown){document.getElementById("ewOut").textContent="Load an unknown spectrum first.";return;}
+  const s1=parseFloat(document.getElementById("sh1Input").value);
+  const s2=parseFloat(document.getElementById("sh2Input").value);
+  if(isNaN(s1)||isNaN(s2)){
+    document.getElementById("ewOut").textContent="Enter both shoulder wavelengths (Å) to measure the equivalent width.";return;}
+  az.sh1=Math.max(WL0,Math.min(WL1,s1));
+  az.sh2=Math.max(WL0,Math.min(WL1,s2));
+  az.ewMode=false;document.getElementById("ewBtn").classList.remove("on");
+  computeEW();
+}
 function drawZoom(){
   const W=zc.width,H=zc.height,pad=ZPAD;
-  zcx.fillStyle="#04121a";zcx.fillRect(0,0,W,H);
-  zcx.strokeStyle="#123240";zcx.lineWidth=1;zcx.strokeRect(pad,8,W-pad-8,H-30);
+  zcx.fillStyle=pal.bgZoom;zcx.fillRect(0,0,W,H);
+  zcx.strokeStyle=pal.frame;zcx.lineWidth=1;zcx.strokeRect(pad,8,W-pad-8,H-30);
   zcx.save();zcx.translate(10,H/2);zcx.rotate(-Math.PI/2);
-  zcx.fillStyle="#3f7d8c";zcx.font="10px 'IBM Plex Mono'";zcx.fillText("REL. INTENSITY",-40,0);zcx.restore();
+  zcx.fillStyle=pal.axis;zcx.font="10px 'IBM Plex Mono'";zcx.fillText("REL. INTENSITY",-40,0);zcx.restore();
   if(!cls.unknown){
-    zcx.fillStyle="#3f7d8c";zcx.font="12px 'IBM Plex Mono'";
+    zcx.fillStyle=pal.axis;zcx.font="12px 'IBM Plex Mono'";
     zcx.fillText("no unknown loaded",pad+10,H/2);return;
   }
   const F=cls.unknown.data,i0=idxOf(az.wl0),i1=idxOf(az.wl1);
@@ -1396,13 +1602,14 @@ function drawZoom(){
   const Y=v=>8+(H-38)*(1-(v-lo)/(hi-lo));
   const wspan=az.wl1-az.wl0;
   const step=wspan>600?100:wspan>250?50:wspan>120?20:wspan>50?10:5;
-  zcx.fillStyle="#3f7d8c";zcx.font="10px 'IBM Plex Mono'";
+  zcx.fillStyle=pal.axis;zcx.font="10px 'IBM Plex Mono'";
   for(let wl=Math.ceil(az.wl0/step)*step;wl<=az.wl1;wl+=step){
     const x=X(wl);zcx.fillText(wl,x-14,H-8);
-    zcx.strokeStyle="#123240";zcx.beginPath();zcx.moveTo(x,H-22);zcx.lineTo(x,H-26);zcx.stroke();
+    zcx.strokeStyle=pal.grid;zcx.beginPath();zcx.moveTo(x,H-22);zcx.lineTo(x,H-26);zcx.stroke();
   }
   /* line markers: the checkbox shows the whole table; a line chosen from the
-     Spectral Lines menu is always marked, even with the checkbox off */
+     Spectral Lines menu is always marked, even with the checkbox off. The
+     selected line is drawn solid, others dashed — a non-color cue as well. */
   const showAll=document.getElementById("lineChk").checked;
   let stag=0;
   for(const L of LINE_TABLE){
@@ -1410,9 +1617,9 @@ function drawZoom(){
     const isSel=az.selLine===L;
     if(!showAll&&!isSel)continue;
     const x=X(L.wl);
-    zcx.strokeStyle=isSel?"rgba(255,180,84,.95)":"rgba(255,180,84,.30)";
-    zcx.setLineDash([3,4]);zcx.beginPath();zcx.moveTo(x,26);zcx.lineTo(x,H-24);zcx.stroke();zcx.setLineDash([]);
-    zcx.fillStyle=isSel?"#ffb454":"#8a6430";zcx.font="10px 'IBM Plex Mono'";
+    zcx.strokeStyle=isSel?pal.lineSelStroke:pal.lineDimStroke;
+    zcx.setLineDash(isSel?[]:[3,4]);zcx.beginPath();zcx.moveTo(x,26);zcx.lineTo(x,H-24);zcx.stroke();zcx.setLineDash([]);
+    zcx.fillStyle=isSel?pal.lineSel:pal.lineDim;zcx.font=(isSel?"600 ":"")+"10px 'IBM Plex Mono'";
     zcx.fillText(L.id,x+2,17+(stag%2)*9);stag++;
   }
   if(az.result){
@@ -1421,21 +1628,21 @@ function drawZoom(){
     zcx.beginPath();
     for(let i=r.ia;i<=r.ib;i++){const x=X(WL0+i*DWL),y=Y(F[i]);i>r.ia?zcx.lineTo(x,y):zcx.moveTo(x,y);}
     for(let i=r.ib;i>=r.ia;i--)zcx.lineTo(X(WL0+i*DWL),Y(cont(i)));
-    zcx.closePath();zcx.fillStyle="rgba(228,87,61,.20)";zcx.fill();
-    zcx.strokeStyle="rgba(126,226,154,.9)";zcx.setLineDash([5,4]);zcx.beginPath();
+    zcx.closePath();zcx.fillStyle=pal.ewFill;zcx.fill();
+    zcx.strokeStyle=pal.ewCont;zcx.setLineDash([5,4]);zcx.beginPath();
     zcx.moveTo(X(WL0+r.ia*DWL),Y(r.c1));zcx.lineTo(X(WL0+r.ib*DWL),Y(r.c2));zcx.stroke();zcx.setLineDash([]);
     for(const i of[r.ia,r.ib]){
       const x=X(WL0+i*DWL);
-      zcx.strokeStyle="rgba(126,226,154,.9)";zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
+      zcx.strokeStyle=pal.ewCont;zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
     }
     const xc=X(r.center);
-    zcx.fillStyle="#e4573d";zcx.beginPath();
+    zcx.fillStyle=pal.ewCenter;zcx.beginPath();
     zcx.moveTo(xc-4,H-24);zcx.lineTo(xc+4,H-24);zcx.lineTo(xc,H-31);zcx.closePath();zcx.fill();
   }else if(az.sh1!=null){
     const x=X(az.sh1);
-    zcx.strokeStyle="rgba(126,226,154,.9)";zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
+    zcx.strokeStyle=pal.ewCont;zcx.beginPath();zcx.moveTo(x,20);zcx.lineTo(x,H-24);zcx.stroke();
   }
-  zcx.strokeStyle="#6fd3e0";zcx.lineWidth=1.2;zcx.beginPath();
+  zcx.strokeStyle=pal.spec;zcx.lineWidth=1.2;zcx.beginPath();
   for(let i=i0;i<=i1;i++){
     const x=X(WL0+i*DWL),y=Y(F[i]);
     i>i0?zcx.lineTo(x,y):zcx.moveTo(x,y);
@@ -1443,7 +1650,7 @@ function drawZoom(){
   zcx.stroke();
   if(az.cursor!=null&&az.cursor>=az.wl0&&az.cursor<=az.wl1){
     const x=X(az.cursor);
-    zcx.strokeStyle="rgba(255,180,84,.75)";zcx.lineWidth=1;
+    zcx.strokeStyle=pal.cursor;zcx.lineWidth=1;
     zcx.beginPath();zcx.moveTo(x,10);zcx.lineTo(x,H-24);zcx.stroke();
   }
 }
@@ -1471,18 +1678,30 @@ zc.addEventListener("click",e=>{
 });
 function buildLineUI(){
   const ul=document.getElementById("lineList");ul.innerHTML="";
-  LINE_TABLE.forEach(L=>{
+  LINE_TABLE.forEach((L,i)=>{
     const li=document.createElement("li");
     li.textContent=L.wl.toFixed(1)+" Å  ·  "+L.id;
-    li.onclick=()=>{
-      az.selLine=L;
-      ul.querySelectorAll("li").forEach(x=>x.classList.remove("sel"));
-      li.classList.add("sel");
-      document.getElementById("lineHelp").textContent=L.id+" λ"+L.wl.toFixed(1)+" — "+L.desc;
-      azCenterOn(L.wl);
-    };
+    li.setAttribute("role","option");
+    li.id="lineOpt"+i;
+    li.setAttribute("aria-selected","false");
+    li.tabIndex=i===0?0:-1;                     // first option is the tab stop initially
+    li.onclick=()=>selectLine(i);
     ul.appendChild(li);
   });
+}
+function selectLine(i){
+  const L=LINE_TABLE[i];
+  az.selLine=L;
+  const ul=document.getElementById("lineList");
+  ul.querySelectorAll('[role="option"]').forEach((x,j)=>{
+    const on=j===i;
+    x.classList.toggle("sel",on);
+    x.setAttribute("aria-selected",on?"true":"false");
+    x.tabIndex=on?0:-1;
+  });
+  ul.setAttribute("aria-activedescendant","lineOpt"+i);
+  document.getElementById("lineHelp").textContent=L.id+" λ"+L.wl.toFixed(1)+" — "+L.desc;
+  azCenterOn(L.wl);
 }
 
 /* ---------------- screen switching & init ---------------- */
@@ -1500,18 +1719,33 @@ function hasProgress(){
   return savedSpectra.length>0 || spec.total>0 ||
     Object.keys(classifications).length>0;
 }
+function confirmLeave(e){
+  if(hasProgress()&&!window.confirm(
+    "Leaving for the homepage will end your session.\n"+
+    "Saved spectra, the current integration, and recorded classifications are "+
+    "NOT stored and will be lost.\n\n"+
+    "Leave anyway?"))e.preventDefault();
+}
+/* the same protection for refresh, tab close, and the back button */
+window.addEventListener("beforeunload",e=>{
+  if(hasProgress()){e.preventDefault();e.returnValue="";}
+});
 (function init(){
+  // restore the accessibility preference (or honor the OS contrast setting)
+  let hcOn=false;
+  try{
+    const v=localStorage.getItem("oeo-a11y");
+    if(v!==null)hcOn=v==="1";
+    else if(window.matchMedia)hcOn=matchMedia("(prefers-contrast: more)").matches;
+  }catch(e){}
+  setContrast(hcOn,true);
   const hs=document.getElementById("hotSel");
   HOTLIST.forEach((h,i)=>hs.add(new Option(h.name+"  (V="+h.V.toFixed(1)+")",i)));
   regenProgramSpectra();
   buildAtlasUI();buildLineUI();refreshUnknownSel();refreshSavedUI();
+  wireListbox(document.getElementById("atlasList"),selectAtlas);
+  wireListbox(document.getElementById("lineList"),selectLine);
   if(window.JACOBY_ATLAS)registerJacobyAtlas(window.JACOBY_ATLAS);  // enables the toggle; synthetic stays active
-  document.getElementById("homeLink").addEventListener("click",e=>{
-    if(hasProgress()&&!confirm(
-      "Leaving this page will end your session — saved spectra, the current "+
-      "integration, and recorded classifications will all be lost.\n\n"+
-      "Go to the homepage anyway?"))e.preventDefault();
-  });
   requestAnimationFrame(frame);
 })();
 </script>
